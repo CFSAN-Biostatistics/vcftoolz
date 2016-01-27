@@ -45,5 +45,7 @@ docs/_build
 # generated files
 *.gz
 *.tbi
+*.all.vcf
+*.qry
 isec-out
 output

@@ -110,6 +110,30 @@ def get_sample_list(vcf_path):
         return reader.samples
 
 
+class SampleSnps(object):
+    """
+    Class to hold a list of snps and the genotype 
+    data per snp position.
+    """
+
+    def __init__(self, snp_list, format_dict, call_dict):
+        """
+        Initialize the Snps container.
+
+        Parameters
+        ----------
+        snp_list : list of tuples
+            List of tuples of (chrom, pos, ref, alt, sample)
+        format_dict : dict
+            Dictionary mapping from keyed snp tuple to FORMAT string
+        call_dict : dict
+            Dictionary mapping from keyed snp tuple to namedtuple of genotype data elements
+        """
+        self.snp_list = snp_list
+        self.format_dict = format_dict
+        self.call_dict = call_dict
+
+
 def get_snp_list(vcf_path, all_records):
     """
     Get the list of snps in a VCF file.
@@ -124,12 +148,17 @@ def get_snp_list(vcf_path, all_records):
 
     Returns
     -------
-    snp_list : list of tuples
-        List of tuples of (chrom, pos, ref, alt, sample)
+    snps : SampleSnps
+        Container of:
+            snp_list : list of tuples of (chrom, pos, ref, alt, sample)
+            format_dict : dictionary mapping from keyed snp tuple to FORMAT string
+            call_dict : dictionary mapping from keyed snp tuple to namedtuple of genotype data elements
     """
     with open(vcf_path) as inp:
         reader = vcf.VCFReader(inp)
         snps = []
+        format_dict = dict()
+        call_dict = dict()
         for record in reader:
             if not all_records and not record.is_snp:
                 print("Warning: the vcf record is not a snp record at position %i in file %s" % (record.POS, vcf_path))
@@ -152,7 +181,9 @@ def get_snp_list(vcf_path, all_records):
                     continue
                 snp = (record.CHROM, int(record.POS), record.REF, bases, sample.sample)
                 snps.append(snp)
-    return snps
+                format_dict[snp] = record.FORMAT
+                call_dict[snp] = sample.data
+    return SampleSnps(snps, format_dict, call_dict)
 
 
 def parse_arguments(system_args):
@@ -224,8 +255,10 @@ def main(args):
         print()
 
     # Extract the snps from each vcf file
-    snp_list_list = [get_snp_list(path, args.all_records) for path in args.vcf_path_list]
-    snp_set_list = [set(snp_list) for snp_list in snp_list_list]
+    sample_snps_list = [get_snp_list(path, args.all_records) for path in args.vcf_path_list]
+    snp_set_list = [set(sample_snps.snp_list) for sample_snps in sample_snps_list]
+    format_dict_list = [sample_snps.format_dict for sample_snps in sample_snps_list]
+    call_dict_list = [sample_snps.call_dict for sample_snps in sample_snps_list]
     unique_snps_sets = [u - s for u in snp_set_list for s in snp_set_list if not s is u]
 
     # Print some statistics
@@ -247,18 +280,23 @@ def main(args):
         count = len(unique_snps_sets[i])
         print("Number of sample snps only in {dataset}:\t{count}".format(dataset=dataset, count=count))
 
-
-    # Print unique sets
+    # Print the snps present in only one of the VCF files
     for i in range(len(base_vcf_file_name_list)):
         print("\nSample snps only in %s" % base_vcf_file_name_list[i])
         sorted_snps = sorted(list(unique_snps_sets[i]))
         if len(sorted_snps) == 0:
             print("None")
         else:
-            print("CHROM   \tPOS\tREF\tALT\tSAMPLE")
+            print("CHROM   \tPOS\tREF\tALT\tSAMPLE  \tFORMAT\tDATA")
             for snp in sorted_snps:
-                stringified_snp = [str(x) for x in snp]
-                print('\t'.join(stringified_snp))
+                fields = [str(x) for x in snp]
+                format_str = format_dict_list[i][snp]
+                format_keys = format_str.split(":")
+                call_data = call_dict_list[i][snp]
+                call_data_str = ":".join([str(getattr(call_data, k, None)) for k in format_keys])
+                fields.append(format_str)
+                fields.append(call_data_str)
+                print('\t'.join(fields))
 
 
 
