@@ -99,6 +99,11 @@ def get_sample_list(vcf_path):
     ----------
     vcf_path : str
         Path to the VCF file
+
+    Returns
+    -------
+    samples : list of str
+        List of sample names in the VCF file
     """
     with open(vcf_path) as inp:
         reader = vcf.VCFReader(inp)
@@ -204,7 +209,7 @@ def main(args):
     vcf_file_name_list = [os.path.basename(p) for p in args.vcf_path_list]
     base_vcf_file_name_list = [os.path.splitext(f)[0] for f in vcf_file_name_list]
 
-    # Get the sample names
+    # Get the list of sample names in each VCF file
     sample_set_list = [set(get_sample_list(path)) for path in args.vcf_path_list]
     all_samples = set()
     all_samples = all_samples.union(*sample_set_list)
@@ -252,8 +257,8 @@ def main(args):
         else:
             print("CHROM   \tPOS\tREF\tALT\tSAMPLE")
             for snp in sorted_snps:
-                stringfy_snp = [str(x) for x in snp]
-                print('\t'.join(stringfy_snp))
+                stringified_snp = [str(x) for x in snp]
+                print('\t'.join(stringified_snp))
 
 
 
