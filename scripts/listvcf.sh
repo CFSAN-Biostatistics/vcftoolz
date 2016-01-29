@@ -12,5 +12,5 @@ if [[ -n $2 ]]; then
     grep $2 $1 >> $1.qry
     column -t $1.qry | less -S
 else
-    cat $1 | grep -v "##" | column -t  | less -S
+    cat $1 | grep -v "##" | column -t  | less -N -S
 fi
