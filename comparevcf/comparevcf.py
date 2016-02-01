@@ -241,6 +241,7 @@ def main(args):
     # Get short base file name for each input
     vcf_file_name_list = [os.path.basename(p) for p in args.vcf_path_list]
     base_vcf_file_name_list = [os.path.splitext(f)[0] for f in vcf_file_name_list]
+    num_vcf_files = len(base_vcf_file_name_list)
 
     # Get the list of sample names in each VCF file
     sample_set_list = [set(get_sample_list(path)) for path in args.vcf_path_list]
@@ -268,36 +269,36 @@ def main(args):
     unique_snps_sets = [snp_set & all_unique_snps for snp_set in snp_set_list]        
 
     # Find the snps that are missing from each VCF file but are present in more than one other VCF file
-    if len(base_vcf_file_name_list) >= 3:
+    if num_vcf_files >= 3:
         all_duplicate_snps = {snp for snp, count in snp_counts.items() if count > 1}
         missing_snps_sets = [all_duplicate_snps - snp_set for snp_set in snp_set_list]
 
     # Print some statistics
-    for i in range(len(base_vcf_file_name_list)):
+    for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
         count = len(sample_set_list[i])
         print("Number of samples in {dataset}:\t{count}".format(dataset=dataset, count=count))
-    for i in range(len(base_vcf_file_name_list)):
+    for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
         positions = set([t[1] for t in snp_set_list[i]])
         count = len(positions)
         print("Number of positions having snps in {dataset}:\t{count}".format(dataset=dataset, count=count))
-    for i in range(len(base_vcf_file_name_list)):
+    for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
         count = len(snp_set_list[i])
         print("Number of sample snps in {dataset}:\t{count}".format(dataset=dataset, count=count))
-    for i in range(len(base_vcf_file_name_list)):
+    for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
         count = len(unique_snps_sets[i])
         print("Number of sample snps only in {dataset}:\t{count}".format(dataset=dataset, count=count))
-    if len(base_vcf_file_name_list) >= 3:
-        for i in range(len(base_vcf_file_name_list)):
+    if num_vcf_files >= 3:
+        for i in range(num_vcf_files):
             dataset = base_vcf_file_name_list[i]
             count = len(missing_snps_sets[i])
             print("Number of sample snps missing in {dataset}, but present in at least 2 other VCF files:\t{count}".format(dataset=dataset, count=count))
 
     # Print the snps present in only one of the VCF files
-    for i in range(len(base_vcf_file_name_list)):
+    for i in range(num_vcf_files):
         print("\nSample snps only in %s" % base_vcf_file_name_list[i])
         sorted_snps = sorted(list(unique_snps_sets[i]))
         if len(sorted_snps) == 0:
@@ -316,8 +317,8 @@ def main(args):
 
 
     # Print the snps missing in each of the VCF files
-    if len(base_vcf_file_name_list) >= 3:
-        for i in range(len(base_vcf_file_name_list)):
+    if num_vcf_files >= 3:
+        for i in range(num_vcf_files):
             print("\nSample snps missing in %s, but present in at least 2 other VCF files:" % base_vcf_file_name_list[i])
             sorted_snps = sorted(list(missing_snps_sets[i]))
             if len(sorted_snps) == 0:
@@ -327,6 +328,52 @@ def main(args):
                 for snp in sorted_snps:
                     fields = [str(x) for x in snp]
                     print('\t'.join(fields))
+
+
+    # Generate a venn diagram if the necessary packages are installed
+    #generate_venn_diagrams(snp_set_list, base_vcf_file_name_list, 'snps.venn.pdf')
+    if num_vcf_files == 2 or num_vcf_files == 3:
+        try:
+            from matplotlib import pyplot as plt
+            from matplotlib_venn import venn2, venn3, venn2_circles, venn3_circles
+        except:
+            report_error("Skipping venn diagram creation.  Requires matplotlib and matplotlib_venn.")
+            exit(1)
+
+        colors2 = ['red', 'blue', 'magenta']
+        alpha2 = [0.6, 0.4, 0.1]
+        if len(base_vcf_file_name_list) == 2:
+            c = venn2(snp_set_list, set_labels=base_vcf_file_name_list)    
+            c.get_patch_by_id('10').set_color(colors2[0])
+            c.get_patch_by_id('01').set_color(colors2[1])
+            c.get_patch_by_id('11').set_color(colors2[2])
+            c.get_patch_by_id('10').set_alpha(alpha2[0])
+            c.get_patch_by_id('01').set_alpha(alpha2[1])
+            c.get_patch_by_id('11').set_alpha(alpha2[2])
+            plt.title("Venn Diagram of SNPs")
+        else:
+            draw_3_way = False
+            fig, axes = plt.subplots(3 + draw_3_way)
+            plt_idx = 0
+            if draw_3_way:
+                venn3(snp_set_list, set_labels=base_vcf_file_name_list, ax=axes[plt_idx])
+                plt_idx += 1
+            for pair in itertools.combinations(range(num_vcf_files), 2):
+                sets = [snp_set_list[k] for k in range(num_vcf_files) if k in pair]
+                names = [base_vcf_file_name_list[k] for k in range(num_vcf_files) if k in pair]
+                c = venn2(sets, set_labels=names, ax=axes[plt_idx])
+                c.get_patch_by_id('10').set_color(colors2[0])
+                c.get_patch_by_id('01').set_color(colors2[1])
+                c.get_patch_by_id('11').set_color(colors2[2])
+                c.get_patch_by_id('10').set_alpha(alpha2[0])
+                c.get_patch_by_id('01').set_alpha(alpha2[1])
+                c.get_patch_by_id('11').set_alpha(alpha2[2])
+                plt_idx += 1
+            axes[0].set_title("Venn Diagram of SNPs")
+        plt.show()
+        plt.savefig('snps.venn.pdf')
+
+
 
 
 if __name__ == '__main__':
