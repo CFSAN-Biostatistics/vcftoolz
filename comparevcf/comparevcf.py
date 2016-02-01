@@ -45,6 +45,8 @@ import argparse
 import sys
 import os
 import vcf
+import itertools
+import collections
 
 __version__ = '0.1.0'
 
@@ -259,7 +261,16 @@ def main(args):
     snp_set_list = [set(sample_snps.snp_list) for sample_snps in sample_snps_list]
     format_dict_list = [sample_snps.format_dict for sample_snps in sample_snps_list]
     call_dict_list = [sample_snps.call_dict for sample_snps in sample_snps_list]
-    unique_snps_sets = [u - s for u in snp_set_list for s in snp_set_list if not s is u]
+
+    # Find the snps that only appear in one of the VCF files
+    snp_counts = collections.Counter(itertools.chain.from_iterable(snp_set_list))
+    all_unique_snps = {snp for snp, count in snp_counts.items() if count == 1}
+    unique_snps_sets = [snp_set & all_unique_snps for snp_set in snp_set_list]        
+
+    # Find the snps that are missing from each VCF file but are present in more than one other VCF file
+    if len(base_vcf_file_name_list) >= 3:
+        all_duplicate_snps = {snp for snp, count in snp_counts.items() if count > 1}
+        missing_snps_sets = [all_duplicate_snps - snp_set for snp_set in snp_set_list]
 
     # Print some statistics
     for i in range(len(base_vcf_file_name_list)):
@@ -279,6 +290,11 @@ def main(args):
         dataset = base_vcf_file_name_list[i]
         count = len(unique_snps_sets[i])
         print("Number of sample snps only in {dataset}:\t{count}".format(dataset=dataset, count=count))
+    if len(base_vcf_file_name_list) >= 3:
+        for i in range(len(base_vcf_file_name_list)):
+            dataset = base_vcf_file_name_list[i]
+            count = len(missing_snps_sets[i])
+            print("Number of sample snps missing in {dataset}, but present in at least 2 other VCF files:\t{count}".format(dataset=dataset, count=count))
 
     # Print the snps present in only one of the VCF files
     for i in range(len(base_vcf_file_name_list)):
@@ -298,6 +314,19 @@ def main(args):
                 fields.append(call_data_str)
                 print('\t'.join(fields))
 
+
+    # Print the snps missing in each of the VCF files
+    if len(base_vcf_file_name_list) >= 3:
+        for i in range(len(base_vcf_file_name_list)):
+            print("\nSample snps missing in %s, but present in at least 2 other VCF files:" % base_vcf_file_name_list[i])
+            sorted_snps = sorted(list(missing_snps_sets[i]))
+            if len(sorted_snps) == 0:
+                print("None")
+            else:
+                print("CHROM   \tPOS\tREF\tALT\tSAMPLE")
+                for snp in sorted_snps:
+                    fields = [str(x) for x in snp]
+                    print('\t'.join(fields))
 
 
 if __name__ == '__main__':
