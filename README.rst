@@ -31,7 +31,10 @@ and Drug Administration, Center for Food Safety and Applied Nutrition.
 Features
 --------
 
-* TODO: Insert a bulleted list of features here
+* Compares the snps in two or more VCF files.
+* Lists the snps that are unique to each VCF file with full genotype information per snp.
+* Lists the snps that are missing from each VCF file if present in at least two other VCF files.
+* Generates Venn diagrams of all pairs of VCF files.
 
 
 Citing compare-vcf
