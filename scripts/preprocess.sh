@@ -13,3 +13,5 @@ sed -i 's/Salmonella_enterica_subsp._enterica_serovar_Bareilly_str._CP006054_AOZ
 
 # Remove malformed contig lines from lyveset vcf file
 sed -i '/##contig/d' lyveset-1.1.3-bareilly.vcf
+sed -i '/##contig/d' lyveset-1.1.4-bareilly.withNs.vcf
+sed -i '/##contig/d' lyveset-1.1.4-bareilly.noNs.vcf
