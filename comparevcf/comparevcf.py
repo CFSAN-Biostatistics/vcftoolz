@@ -118,20 +118,23 @@ class SampleSnps(object):
     data per snp position.
     """
 
-    def __init__(self, snp_list, format_dict, call_dict):
+    def __init__(self, snp_list, alt_dict, format_dict, call_dict):
         """
         Initialize the Snps container.
 
         Parameters
         ----------
         snp_list : list of tuples
-            List of tuples of (chrom, pos, ref, alt, sample)
+            List of tuples of (chrom, pos, ref, call, sample)
+        alt_dict :  dict
+            Dictionary mapping from keyed snp tuple to actual alt list
         format_dict : dict
             Dictionary mapping from keyed snp tuple to FORMAT string
         call_dict : dict
             Dictionary mapping from keyed snp tuple to namedtuple of genotype data elements
         """
         self.snp_list = snp_list
+        self.alt_dict = alt_dict
         self.format_dict = format_dict
         self.call_dict = call_dict
 
@@ -153,12 +156,14 @@ def get_snp_list(vcf_path, all_records):
     snps : SampleSnps
         Container of:
             snp_list : list of tuples of (chrom, pos, ref, alt, sample)
+            alt_dict :  dictionary mapping from keyed snp tuple to actual alt list
             format_dict : dictionary mapping from keyed snp tuple to FORMAT string
             call_dict : dictionary mapping from keyed snp tuple to namedtuple of genotype data elements
     """
     with open(vcf_path) as inp:
         reader = vcf.VCFReader(inp)
         snps = []
+        alt_dict = dict()
         format_dict = dict()
         call_dict = dict()
         for record in reader:
@@ -183,9 +188,10 @@ def get_snp_list(vcf_path, all_records):
                     continue
                 snp = (record.CHROM, int(record.POS), record.REF, bases, sample.sample)
                 snps.append(snp)
+                alt_dict[snp] = record.ALT
                 format_dict[snp] = record.FORMAT
                 call_dict[snp] = sample.data
-    return SampleSnps(snps, format_dict, call_dict)
+    return SampleSnps(snps, alt_dict, format_dict, call_dict)
 
 
 def parse_arguments(system_args):
@@ -260,6 +266,7 @@ def main(args):
     # Extract the snps from each vcf file
     sample_snps_list = [get_snp_list(path, args.all_records) for path in args.vcf_path_list]
     snp_set_list = [set(sample_snps.snp_list) for sample_snps in sample_snps_list]
+    alt_dict_list = [sample_snps.alt_dict for sample_snps in sample_snps_list]
     format_dict_list = [sample_snps.format_dict for sample_snps in sample_snps_list]
     call_dict_list = [sample_snps.call_dict for sample_snps in sample_snps_list]
 
@@ -307,6 +314,7 @@ def main(args):
             print("CHROM   \tPOS\tREF\tALT\tSAMPLE  \tFORMAT\tDATA")
             for snp in sorted_snps:
                 fields = [str(x) for x in snp]
+                fields[3] = ",".join(map(str, alt_dict_list[i][snp]))
                 format_str = format_dict_list[i][snp]
                 format_keys = format_str.split(":")
                 call_data = call_dict_list[i][snp]
