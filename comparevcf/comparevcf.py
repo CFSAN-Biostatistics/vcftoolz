@@ -13,7 +13,7 @@ Outputs
 -------
 * metrics per VCF file
 * lists of snps exclusively found per VCF file
-* Venn Diagram (planned for future release)
+* Venn Diagram
 * parsimony trees, one per input VCF file (planned for future release)
 
 Errors
@@ -58,6 +58,49 @@ def report_error(message):
     print(message, file=sys.stderr)
 
 
+def get_unique_set_elements(sets):
+    """
+    Given a list of sets, return a new list of sets with the overlapping
+    elements removed, leaving only the set elements that are unique to each
+    set.
+
+    Parameters
+    ----------
+    sets : list of set
+
+    Returns
+    -------
+    unique_element_sets : list of set
+    """
+    # To avoid quadratic runtime, make an initial pass to determine which elements appear in only one set
+    element_counts = collections.Counter(itertools.chain.from_iterable(sets))
+
+    all_unique_elements = {element for element, count in element_counts.items() if count == 1}
+    unique_element_sets = [element_set & all_unique_elements for element_set in sets]
+    return unique_element_sets
+
+
+def get_missing_set_elements(sets):
+    """
+    Given a list of sets, return a new list of sets containing the elements that are
+    missing from each set but are present in more than one other set.
+
+    Parameters
+    ----------
+    sets : list of set
+
+    Returns
+    -------
+    missing_element_sets : list of set
+    """
+    # To avoid quadratic runtime, make an initial pass to determine which elements appear in more than one set
+    element_counts = collections.Counter(itertools.chain.from_iterable(sets))
+
+    all_duplicate_elements = {element for element, count in element_counts.items() if count > 1}
+    missing_element_sets = [all_duplicate_elements - element_set for element_set in sets]
+    return missing_element_sets
+
+
 
 def verify_non_empty_input_files(error_prefix, file_list):
     """
@@ -68,7 +111,7 @@ def verify_non_empty_input_files(error_prefix, file_list):
     ----------
     error_prefix : str
         first part of error message to be logged
-    file_list : list 
+    file_list : list
         relative or absolute paths to files
 
     Returns
@@ -114,7 +157,7 @@ def get_sample_list(vcf_path):
 
 class SampleSnps(object):
     """
-    Class to hold a list of snps and the genotype 
+    Class to hold a list of snps and the genotype
     data per snp position.
     """
 
@@ -209,7 +252,7 @@ def parse_arguments(system_args):
         Command line arguments are stored as attributes of a Namespace.
     """
     usage = """Compare and analyze the snps found in multiple input VCF files."""
-               
+
     parser = argparse.ArgumentParser(description=usage, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument(dest="vcf_path_list", type=str, metavar="VcfFile", nargs='+', help="List of VCF files")
@@ -264,45 +307,89 @@ def main(args):
         print()
 
     # Extract the snps from each vcf file
-    sample_snps_list = [get_snp_list(path, args.all_records) for path in args.vcf_path_list]
-    snp_set_list = [set(sample_snps.snp_list) for sample_snps in sample_snps_list]
+    sample_snps_list = [get_snp_list(path, args.all_records) for path in args.vcf_path_list] # List of SampleSnps
+    snp_set_list = [set(sample_snps.snp_list) for sample_snps in sample_snps_list] # list of set of tuples of (chrom, pos, ref, call, sample)
     alt_dict_list = [sample_snps.alt_dict for sample_snps in sample_snps_list]
     format_dict_list = [sample_snps.format_dict for sample_snps in sample_snps_list]
     call_dict_list = [sample_snps.call_dict for sample_snps in sample_snps_list]
 
     # Find the snps that only appear in one of the VCF files
-    snp_counts = collections.Counter(itertools.chain.from_iterable(snp_set_list))
-    all_unique_snps = {snp for snp, count in snp_counts.items() if count == 1}
-    unique_snps_sets = [snp_set & all_unique_snps for snp_set in snp_set_list]        
+    unique_snps_sets = get_unique_set_elements(snp_set_list)
 
     # Find the snps that are missing from each VCF file but are present in more than one other VCF file
     if num_vcf_files >= 3:
-        all_duplicate_snps = {snp for snp, count in snp_counts.items() if count > 1}
-        missing_snps_sets = [all_duplicate_snps - snp_set for snp_set in snp_set_list]
+        missing_snps_sets = get_missing_set_elements(snp_set_list)
 
     # Print some statistics
     for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
         count = len(sample_set_list[i])
-        print("Number of samples in {dataset}:\t{count}".format(dataset=dataset, count=count))
+        print("{count}\tSamples in {dataset}".format(dataset=dataset, count=count))
+    print()
+
+    position_set_list = []
     for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
         positions = set([t[1] for t in snp_set_list[i]])
+        position_set_list.append(positions)
         count = len(positions)
-        print("Number of positions having snps in {dataset}:\t{count}".format(dataset=dataset, count=count))
+        print("{count}\tPositions having snps in {dataset}".format(dataset=dataset, count=count))
+    print()
+
+    unique_positions_sets = get_unique_set_elements(position_set_list)
+    for i in range(num_vcf_files):
+        dataset = base_vcf_file_name_list[i]
+        count = len(unique_positions_sets[i])
+        print("{count}\tSNP Positions only in {dataset}".format(dataset=dataset, count=count))
+    print()
+
+    if num_vcf_files >= 3:
+        missing_positions_sets = get_missing_set_elements(position_set_list)
+        for i in range(num_vcf_files):
+            dataset = base_vcf_file_name_list[i]
+            count = len(missing_positions_sets[i])
+            print("{count}\tSNP Positions missing in {dataset}, but present in at least 2 other VCF files".format(dataset=dataset, count=count))
+        print()
+
     for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
         count = len(snp_set_list[i])
-        print("Number of sample snps in {dataset}:\t{count}".format(dataset=dataset, count=count))
+        print("{count}\tSample snps in {dataset}".format(dataset=dataset, count=count))
+    print()
+
     for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
         count = len(unique_snps_sets[i])
-        print("Number of sample snps only in {dataset}:\t{count}".format(dataset=dataset, count=count))
+        print("{count}\tSample snps only in {dataset}".format(dataset=dataset, count=count))
+    print()
+
     if num_vcf_files >= 3:
         for i in range(num_vcf_files):
             dataset = base_vcf_file_name_list[i]
             count = len(missing_snps_sets[i])
-            print("Number of sample snps missing in {dataset}, but present in at least 2 other VCF files:\t{count}".format(dataset=dataset, count=count))
+            print("{count}\tSample snps missing in {dataset}, but present in at least 2 other VCF files".format(dataset=dataset, count=count))
+        print()
+
+    # Print the positions present in only one of the VCF files
+    for i in range(num_vcf_files):
+        print("\nPositions only in %s" % base_vcf_file_name_list[i])
+        sorted_positions = sorted(list(unique_positions_sets[i]))
+        if len(sorted_positions) == 0:
+            print("None")
+        else:
+            for pos in sorted_positions:
+                print(pos)
+
+    # Print the positions missing in each of the VCF files
+    if num_vcf_files >= 3:
+        for i in range(num_vcf_files):
+            print("\nPositions missing in %s, but present in at least 2 other VCF files:" % base_vcf_file_name_list[i])
+            sorted_positions = sorted(list(missing_positions_sets[i]))
+            if len(sorted_positions) == 0:
+                print("None")
+            else:
+                for pos in sorted_positions:
+                    print(pos)
 
     # Print the snps present in only one of the VCF files
     for i in range(num_vcf_files):
@@ -351,7 +438,7 @@ def main(args):
         colors2 = ['red', 'blue', 'magenta']
         alpha2 = [0.6, 0.4, 0.1]
         if len(base_vcf_file_name_list) == 2:
-            c = venn2(snp_set_list, set_labels=base_vcf_file_name_list)    
+            c = venn2(snp_set_list, set_labels=base_vcf_file_name_list)
             c.get_patch_by_id('10').set_color(colors2[0])
             c.get_patch_by_id('01').set_color(colors2[1])
             c.get_patch_by_id('11').set_color(colors2[2])
