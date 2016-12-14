@@ -440,45 +440,59 @@ def main(args):
     if num_vcf_files == 2 or num_vcf_files == 3:
         try:
             from matplotlib import pyplot as plt
-            from matplotlib_venn import venn2, venn3, venn2_circles, venn3_circles
+            from matplotlib_venn import venn2, venn3, venn3_unweighted, venn2_circles, venn3_circles
         except:
             report_error("Skipping venn diagram creation.  Requires matplotlib and matplotlib_venn.")
             exit(1)
 
-        colors2 = ['red', 'blue', 'magenta']
-        alpha2 = [0.6, 0.4, 0.1]
-        if len(base_vcf_file_name_list) == 2:
-            c = venn2(snp_set_list, set_labels=base_vcf_file_name_list)
-            c.get_patch_by_id('10').set_color(colors2[0])
-            c.get_patch_by_id('01').set_color(colors2[1])
-            c.get_patch_by_id('11').set_color(colors2[2])
-            c.get_patch_by_id('10').set_alpha(alpha2[0])
-            c.get_patch_by_id('01').set_alpha(alpha2[1])
-            c.get_patch_by_id('11').set_alpha(alpha2[2])
-            plt.title("Venn Diagram of SNPs")
-        else:
-            draw_3_way = False
-            fig, axes = plt.subplots(3 + draw_3_way)
+        def colorize_venn2(venn_circles):
+            colors2 = ['red', 'blue', 'magenta']
+            alpha2 = [0.6, 0.4, 0.1]
+            venn_circles.get_patch_by_id('10').set_color(colors2[0])
+            venn_circles.get_patch_by_id('01').set_color(colors2[1])
+            venn_circles.get_patch_by_id('11').set_color(colors2[2])
+            venn_circles.get_patch_by_id('10').set_alpha(alpha2[0])
+            venn_circles.get_patch_by_id('01').set_alpha(alpha2[1])
+            venn_circles.get_patch_by_id('11').set_alpha(alpha2[2])
+            
+        def make_venn2(set_list, title, output_file):
+            """
+            Draw multiple stacked 2-circle venn diagrams with all pairs of sets.
+            """
+            num_sets = len(set_list)
+            if num_sets == 2:
+                c = venn2(set_list, set_labels=base_vcf_file_name_list)
+                colorize_venn2(c)
+                plt.title(title)
+            else:
+                fig, axes = plt.subplots(3)
+                plt_idx = 0
+                for pair in itertools.combinations(range(num_sets), 2):
+                    sets = [set_list[k] for k in range(num_sets) if k in pair]
+                    names = [base_vcf_file_name_list[k] for k in range(num_sets) if k in pair]
+                    c = venn2(sets, set_labels=names, ax=axes[plt_idx])
+                    colorize_venn2(c)
+                    plt_idx += 1
+                axes[0].set_title(title)
+            plt.show()
+            plt.savefig(output_file)
+            plt.close()
+        
+        make_venn2(snp_set_list, "Venn Diagram of SNPs", "venn2.snps.pdf")
+        make_venn2(position_set_list, "Venn Diagram of Positions", "venn2.positions.pdf")
+
+        if num_vcf_files == 3:
+            fig, axes = plt.subplots(2)
             plt_idx = 0
-            if draw_3_way:
-                venn3(snp_set_list, set_labels=base_vcf_file_name_list, ax=axes[plt_idx])
-                plt_idx += 1
-            for pair in itertools.combinations(range(num_vcf_files), 2):
-                sets = [snp_set_list[k] for k in range(num_vcf_files) if k in pair]
-                names = [base_vcf_file_name_list[k] for k in range(num_vcf_files) if k in pair]
-                c = venn2(sets, set_labels=names, ax=axes[plt_idx])
-                c.get_patch_by_id('10').set_color(colors2[0])
-                c.get_patch_by_id('01').set_color(colors2[1])
-                c.get_patch_by_id('11').set_color(colors2[2])
-                c.get_patch_by_id('10').set_alpha(alpha2[0])
-                c.get_patch_by_id('01').set_alpha(alpha2[1])
-                c.get_patch_by_id('11').set_alpha(alpha2[2])
-                plt_idx += 1
-            axes[0].set_title("Venn Diagram of SNPs")
-        plt.show()
-        plt.savefig('snps.venn.pdf')
-
-
+            venn3_unweighted(position_set_list, set_labels=base_vcf_file_name_list, ax=axes[plt_idx])
+            axes[plt_idx].set_title("Positions")
+            plt_idx += 1
+            venn3_unweighted(snp_set_list, set_labels=base_vcf_file_name_list, ax=axes[plt_idx])
+            axes[plt_idx].set_title("SNPs")
+            plt.subplots_adjust(hspace=0.5)  # adjust height spacing between subplots
+            plt.show()
+            plt.savefig('venn3.pdf')
+            plt.close()
 
 
 if __name__ == '__main__':
