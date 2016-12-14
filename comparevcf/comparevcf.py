@@ -182,7 +182,7 @@ class SampleSnps(object):
         self.call_dict = call_dict
 
 
-def get_snp_list(vcf_path, all_records):
+def get_snp_list(vcf_path, all_records, passfilter):
     """
     Get the list of snps in a VCF file.
 
@@ -193,6 +193,10 @@ def get_snp_list(vcf_path, all_records):
     all_records : bool
         Flag to cause all processing of all records, regardless of whether the
         record is a snp record
+    passfilter : bool
+        Process only the VCF samples or records having PASS FT element or PASS
+        filter.  The filter element is always ignored when samples have the FT
+        element regardless of this option.
 
     Returns
     -------
@@ -223,12 +227,17 @@ def get_snp_list(vcf_path, all_records):
                     bases = bases[0]
                 if bases == "N":
                     continue
+
+                # If there are filters per sample, use them
                 try:
                     FT = sample.data.FT
+                    if FT and FT != "PASS":
+                        continue
+                # Otherwise, use the filter for the whole record
                 except:
-                    FT = None
-                if FT and FT != "PASS":
-                    continue
+                    if passfilter and len(record.FILTER) > 0:
+                        continue
+
                 snp = (record.CHROM, int(record.POS), record.REF, bases, sample.sample)
                 snps.append(snp)
                 alt_dict[snp] = record.ALT
@@ -255,9 +264,10 @@ def parse_arguments(system_args):
 
     parser = argparse.ArgumentParser(description=usage, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument(dest="vcf_path_list", type=str, metavar="VcfFile", nargs='+', help="List of VCF files")
+    parser.add_argument(dest="vcf_path_list", type=str, metavar="VcfFile", nargs='+',  help="List of VCF files")
     parser.add_argument("-a", "--allrecords", action='store_true', dest="all_records", help="Process all VCF records assuming all records are snp records.")
-    parser.add_argument('--version', action='version', version='%(prog)s version ' + __version__)
+    parser.add_argument("-p", "--pass",       action='store_true', dest="passfilter",  help="Process only the VCF samples or records having PASS FT element or PASS filter.  The filter element is always ignored when samples have the FT element regardless of this option.")
+    parser.add_argument('--version',          action='version', version='%(prog)s version ' + __version__)
 
     args = parser.parse_args(system_args)
     if len(args.vcf_path_list) < 2:
@@ -307,7 +317,7 @@ def main(args):
         print()
 
     # Extract the snps from each vcf file
-    sample_snps_list = [get_snp_list(path, args.all_records) for path in args.vcf_path_list] # List of SampleSnps
+    sample_snps_list = [get_snp_list(path, args.all_records, args.passfilter) for path in args.vcf_path_list] # List of SampleSnps
     snp_set_list = [set(sample_snps.snp_list) for sample_snps in sample_snps_list] # list of set of tuples of (chrom, pos, ref, call, sample)
     alt_dict_list = [sample_snps.alt_dict for sample_snps in sample_snps_list]
     format_dict_list = [sample_snps.format_dict for sample_snps in sample_snps_list]
