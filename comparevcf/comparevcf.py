@@ -16,8 +16,8 @@ Outputs
 * Venn Diagram
 * parsimony trees, one per input VCF file (planned for future release)
 
-Errors
-------
+Errors Reported
+---------------
 * Sample names are not the same and are not compareable
 * Different numnber of samples
 
@@ -48,7 +48,7 @@ import vcf
 import itertools
 import collections
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 
 def report_error(message):
@@ -100,6 +100,41 @@ def get_missing_set_elements(sets):
     missing_element_sets = [all_duplicate_elements - element_set for element_set in sets]
     return missing_element_sets
 
+
+def get_set_intersections(sets):
+    """
+    Given a list of sets, return a new list of sets with all the possible
+    mutually exclusive overlapping combinations of those sets.  Another way
+    to think of this is the mutually exclusive sections of a venn diagram
+    of the sets.  If the original list has N sets, the returned list will
+    have (2**N)-1 sets.
+
+    Parameters
+    ----------
+    sets : list of set
+
+    Returns
+    -------
+    combinations : list of tuple
+        tag : str
+            Binary string representing which sets are included / excluded in
+            the combination.
+        set : set
+            The set formed by the overlapping input sets.
+    """
+    num_combinations = 2 ** len(sets)
+    bit_flags = [2 ** n for n in range(len(sets))]
+    flags_zip_sets = [z for z in zip(bit_flags, sets)]
+
+    combo_sets = []
+    for bits in range(num_combinations - 1, 0, -1):
+        include_sets = [s for flag, s in flags_zip_sets if bits & flag]
+        exclude_sets = [s for flag, s in flags_zip_sets if not bits & flag]
+        combo = set.intersection(*include_sets)
+        combo = set.difference(combo, *exclude_sets)
+        tag = ''.join([str(int((bits & flag) > 0)) for flag in bit_flags])
+        combo_sets.append((tag, combo))
+    return combo_sets
 
 
 def verify_non_empty_input_files(error_prefix, file_list):
@@ -155,6 +190,9 @@ def get_sample_list(vcf_path):
         return reader.samples
 
 
+SnpTuple = collections.namedtuple("SnpTuple", "chrom pos ref gt sample")
+
+
 class SampleSnps(object):
     """
     Class to hold a list of snps and the genotype
@@ -167,8 +205,8 @@ class SampleSnps(object):
 
         Parameters
         ----------
-        snp_list : list of tuples
-            List of tuples of (chrom, pos, ref, call, sample)
+        snp_list : list of SnpTuple namedtuple
+            List of SnpTuple namedtuple containing (chrom, pos, ref, gt, sample)
         alt_dict :  dict
             Dictionary mapping from keyed snp tuple to actual alt list
         format_dict : dict
@@ -202,7 +240,7 @@ def get_snp_list(vcf_path, all_records, passfilter):
     -------
     snps : SampleSnps
         Container of:
-            snp_list : list of tuples of (chrom, pos, ref, alt, sample)
+            snps : list of namedtuple SnpTuple containing (chrom, pos, ref, gt, sample)
             alt_dict :  dictionary mapping from keyed snp tuple to actual alt list
             format_dict : dictionary mapping from keyed snp tuple to FORMAT string
             call_dict : dictionary mapping from keyed snp tuple to namedtuple of genotype data elements
@@ -238,12 +276,59 @@ def get_snp_list(vcf_path, all_records, passfilter):
                     if passfilter and len(record.FILTER) > 0:
                         continue
 
-                snp = (record.CHROM, int(record.POS), record.REF, bases, sample.sample)
+                snp = SnpTuple(record.CHROM, int(record.POS), record.REF, bases, sample.sample)
                 snps.append(snp)
                 alt_dict[snp] = record.ALT
                 format_dict[snp] = record.FORMAT
                 call_dict[snp] = sample.data
     return SampleSnps(snps, alt_dict, format_dict, call_dict)
+
+
+def tabulate_results(snp_sets, samples, table_file_path):
+    """
+    Create a TSV spreadsheet with one row per position and one column per sample
+    showing the overlapping intersection of snps from each VCF file.
+
+    Parameters
+    ----------
+    snp_sets : list
+        list of set of SnpTuple namedtuples of (chrom, pos, ref, gt, sample).
+        One set per VCF file in the same order as the VCF files on the command
+        line.
+    samples : list
+        List of sample names
+    table_file_path : str
+        Path to the TSV file to be written.
+    """
+    with open(table_file_path, 'w') as f:
+        # Remember all the different genotypes found at sample positions where at least one VCF file contained a snp
+        pos_sample_snps = collections.defaultdict(set)
+        for snps in snp_sets:
+            for snp in snps:
+                key = snp.chrom + str(snp.pos) + snp.sample
+                pos_sample_snps[key].add(snp.gt)
+
+        # Write the header row
+        sorted_samples = sorted(samples)
+        header_row = ["Chrom", "Pos", "Matches", "Ref"] + sorted_samples
+        f.write("%s\n" % '\t'.join(header_row))
+
+        # Get the membership of each venn diagram
+        position_set_list = [{(s.chrom, s.pos, s.ref) for s in snps} for snps in snp_sets]
+        pos_intersections = get_set_intersections(position_set_list)
+        for tag, positions in pos_intersections:
+            if len(positions) == 0:
+                continue
+            positions = sorted(positions) # set becomes sorted list
+            for chrom, pos, ref in positions:
+                # Prepare and write spreadsheet rows, one row per position and one column per sample
+                pos_str = str(pos)
+                spreadsheet_row = [chrom, pos_str, tag, ref]
+
+                # Lookup all the genotypes found at this sample position (usually just one or none at all)
+                # This is to handle the possibility where different genotypes are reported in different VCF files
+                spreadsheet_row += [','.join(sorted(pos_sample_snps.get(chrom + pos_str + sample, ['0']))) for sample in sorted_samples]
+                f.write("%s\n" % '\t'.join(spreadsheet_row))
 
 
 def parse_arguments(system_args):
@@ -265,8 +350,9 @@ def parse_arguments(system_args):
     parser = argparse.ArgumentParser(description=usage, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument(dest="vcf_path_list", type=str, metavar="VcfFile", nargs='+',  help="List of VCF files")
-    parser.add_argument("-a", "--allrecords", action='store_true', dest="all_records", help="Process all VCF records assuming all records are snp records.")
-    parser.add_argument("-p", "--pass",       action='store_true', dest="passfilter",  help="Process only the VCF samples or records having PASS FT element or PASS filter.  The filter element is always ignored when samples have the FT element regardless of this option.")
+    parser.add_argument("-a", "--allrecords", action='store_true',      dest="all_records", help="Process all VCF records assuming all records are snp records.")
+    parser.add_argument("-p", "--pass",       action='store_true',      dest="passfilter",  help="Process only the VCF samples or records having PASS FT element or PASS filter.  The filter element is always ignored when samples have the FT element regardless of this option.")
+    parser.add_argument("-t", "--tableFile",  type=str, metavar='FILE', dest="table_file",  help="Tablulate the results in the specified tab-separated-value file.")
     parser.add_argument('--version',          action='version', version='%(prog)s version ' + __version__)
 
     args = parser.parse_args(system_args)
@@ -318,7 +404,7 @@ def main(args):
 
     # Extract the snps from each vcf file
     sample_snps_list = [get_snp_list(path, args.all_records, args.passfilter) for path in args.vcf_path_list] # List of SampleSnps
-    snp_set_list = [set(sample_snps.snp_list) for sample_snps in sample_snps_list] # list of set of tuples of (chrom, pos, ref, call, sample)
+    snp_set_list = [set(sample_snps.snp_list) for sample_snps in sample_snps_list] # list of set of SnpTuple namedtuples having (chrom, pos, ref, gt, sample)
     alt_dict_list = [sample_snps.alt_dict for sample_snps in sample_snps_list]
     format_dict_list = [sample_snps.format_dict for sample_snps in sample_snps_list]
     call_dict_list = [sample_snps.call_dict for sample_snps in sample_snps_list]
@@ -340,7 +426,7 @@ def main(args):
     position_set_list = []
     for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
-        positions = set([t[1] for t in snp_set_list[i]])
+        positions = set([t.pos for t in snp_set_list[i]])
         position_set_list.append(positions)
         count = len(positions)
         print("{count}\tPositions having snps in {dataset}".format(dataset=dataset, count=count))
@@ -434,6 +520,10 @@ def main(args):
                     fields = [str(x) for x in snp]
                     print('\t'.join(fields))
 
+    # Tabulate all the venn diagram sections into a TSV spreadsheet
+    # Emit one row per position and one column per sample.
+    if args.table_file:
+        tabulate_results(snp_set_list, all_samples, args.table_file)
 
     # Generate a venn diagram if the necessary packages are installed
     #generate_venn_diagrams(snp_set_list, base_vcf_file_name_list, 'snps.venn.pdf')
@@ -454,7 +544,7 @@ def main(args):
             venn_circles.get_patch_by_id('10').set_alpha(alpha2[0])
             venn_circles.get_patch_by_id('01').set_alpha(alpha2[1])
             venn_circles.get_patch_by_id('11').set_alpha(alpha2[2])
-            
+
         def make_venn2(set_list, title, output_file):
             """
             Draw multiple stacked 2-circle venn diagrams with all pairs of sets.
@@ -477,7 +567,7 @@ def main(args):
             plt.show()
             plt.savefig(output_file)
             plt.close()
-        
+
         make_venn2(snp_set_list, "Venn Diagram of SNPs", "venn2.snps.pdf")
         make_venn2(position_set_list, "Venn Diagram of Positions", "venn2.positions.pdf")
 
