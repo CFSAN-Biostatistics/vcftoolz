@@ -426,7 +426,7 @@ def main(args):
     position_set_list = []
     for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
-        positions = set([t.pos for t in snp_set_list[i]])
+        positions = set([(s.chrom, s.pos) for s in snp_set_list[i]])
         position_set_list.append(positions)
         count = len(positions)
         print("{count}\tPositions having snps in {dataset}".format(dataset=dataset, count=count))
@@ -473,8 +473,9 @@ def main(args):
         if len(sorted_positions) == 0:
             print("None")
         else:
-            for pos in sorted_positions:
-                print(pos)
+            print("CHROM   \tPOS")
+            for chrom, pos in sorted_positions:
+                print(chrom + '\t' + str(pos))
 
     # Print the positions missing in each of the VCF files
     if num_vcf_files >= 3:
@@ -484,8 +485,9 @@ def main(args):
             if len(sorted_positions) == 0:
                 print("None")
             else:
-                for pos in sorted_positions:
-                    print(pos)
+                print("CHROM   \tPOS")
+                for chrom, pos in sorted_positions:
+                    print(chrom + '\t' + str(pos))
 
     # Print the snps present in only one of the VCF files
     for i in range(num_vcf_files):
