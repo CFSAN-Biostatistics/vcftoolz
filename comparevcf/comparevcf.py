@@ -301,33 +301,49 @@ def tabulate_results(snp_sets, samples, table_file_path):
         Path to the TSV file to be written.
     """
     with open(table_file_path, 'w') as f:
-        # Remember all the different genotypes found at sample positions where at least one VCF file contained a snp
-        pos_sample_snps = collections.defaultdict(set)
+        # Remember the set of all the different genotypes found at sample positions where at least one VCF file contained a snp.
+        # This is to handle the possibility where different genotypes are reported in different VCF files.
+        pos_sample_gt = collections.defaultdict(set)
         for snps in snp_sets:
             for snp in snps:
                 key = snp.chrom + str(snp.pos) + snp.sample
-                pos_sample_snps[key].add(snp.gt)
+                pos_sample_gt[key].add(snp.gt)
 
+        # Remember which VCF file contained each snp -- separate into tagged venn diagram sections
+        pos_sample_venn_tag = dict()
+        snp_set_list = [{(s.chrom, s.pos, s.sample) for s in snps} for snps in snp_sets]  # don't distinguish by gt
+        snp_intersections = get_set_intersections(snp_set_list)
+        for tag, snps in snp_intersections:
+            for chrom, pos, sample in snps:
+                key = chrom + str(pos) + sample
+                pos_sample_venn_tag[key] = tag
+                
         # Write the header row
         sorted_samples = sorted(samples)
-        header_row = ["Chrom", "Pos", "Matches", "Ref"] + sorted_samples
+        header_row = ["Chrom", "Pos", "Ref"] + sorted_samples
         f.write("%s\n" % '\t'.join(header_row))
 
         # Get the membership of each venn diagram
         position_set_list = [{(s.chrom, s.pos, s.ref) for s in snps} for snps in snp_sets]
         pos_intersections = get_set_intersections(position_set_list)
-        for tag, positions in pos_intersections:
+        for _, positions in pos_intersections:
             if len(positions) == 0:
                 continue
             positions = sorted(positions) # set becomes sorted list
             for chrom, pos, ref in positions:
                 # Prepare and write spreadsheet rows, one row per position and one column per sample
                 pos_str = str(pos)
-                spreadsheet_row = [chrom, pos_str, tag, ref]
+                spreadsheet_row = [chrom, pos_str, ref]
+
+                # Lookup the intersection tag indicating which VCF files contained the snp
+                spreadsheet_row_tag = [pos_sample_venn_tag.get(chrom + pos_str + sample, '') for sample in sorted_samples]
 
                 # Lookup all the genotypes found at this sample position (usually just one or none at all)
-                # This is to handle the possibility where different genotypes are reported in different VCF files
-                spreadsheet_row += [','.join(sorted(pos_sample_snps.get(chrom + pos_str + sample, ['0']))) for sample in sorted_samples]
+                spreadsheet_row_gt = [','.join(sorted(pos_sample_gt.get(chrom + pos_str + sample, ['0']))) for sample in sorted_samples]
+
+                # Join the tag to the gt list to make the spreadsheet row cells
+                spreadsheet_row += [gt+'-'+tag if tag else gt for tag, gt in zip(spreadsheet_row_tag, spreadsheet_row_gt)]
+
                 f.write("%s\n" % '\t'.join(spreadsheet_row))
 
 
