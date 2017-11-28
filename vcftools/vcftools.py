@@ -50,7 +50,6 @@ import collections
 
 __version__ = '0.2.0'
 
-
 def report_error(message):
     """
     Send an error message to stderr.
@@ -547,6 +546,8 @@ def main(args):
     #generate_venn_diagrams(snp_set_list, base_vcf_file_name_list, 'snps.venn.pdf')
     if num_vcf_files == 2 or num_vcf_files == 3:
         try:
+            import matplotlib
+            matplotlib.use("Agg")
             from matplotlib import pyplot as plt
             from matplotlib_venn import venn2, venn3, venn3_unweighted, venn2_circles, venn3_circles
         except:
