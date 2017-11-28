@@ -25,23 +25,23 @@ test_requirements = [
 ]
 
 setup(
-    name='comparevcf',
+    name='vcftools',
     version='0.1.0',
     description="Compares the snps in two or more VCF files.",
     long_description=readme + '\n\n' + history,
     author="Steve Davis",
     author_email='steven.davis@fda.hhs.gov',
-    url='https://github.com/CFSAN-Biostatistics/comparevcf',
+    url='https://github.com/CFSAN-Biostatistics/vcftools',
     packages=[
-        'comparevcf',
+        'vcftools',
     ],
-    package_dir={'comparevcf':
-                 'comparevcf'},
+    package_dir={'vcftools':
+                 'vcftools'},
     include_package_data=True,
     install_requires=requirements,
     license="BSD",
     zip_safe=False,
-    keywords=['bioinformatics', 'NGS', 'comparevcf'],
+    keywords=['bioinformatics', 'NGS', 'vcftools'],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -56,7 +56,7 @@ setup(
         'Programming Language :: Python :: 3.5',
     ],
     scripts=[
-        'comparevcf/comparevcf.py',
+        'vcftools/vcftools.py',
         'scripts/comparevcf.sh',
         'scripts/listvcf.sh',
         'scripts/preprocess.sh',

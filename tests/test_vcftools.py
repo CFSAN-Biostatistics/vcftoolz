@@ -2,15 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """
-test_comparevcf
+test_vcftools
 ----------------------------------
 
-Tests for `comparevcf` module.
+Tests for `vcftools` module.
 """
 
 import unittest
 
-from comparevcf import comparevcf
+from vcftools import vcftools
 
 
 class TestComparevcf(unittest.TestCase):

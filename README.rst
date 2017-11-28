@@ -1,31 +1,31 @@
 ===============================
-compare-vcf
+vcftools
 ===============================
 
 
 .. Image showing the PyPI version badge - links to PyPI
-.. image:: https://img.shields.io/pypi/v/comparevcf.svg
-        :target: https://pypi.python.org/pypi/comparevcf
+.. image:: https://img.shields.io/pypi/v/vcftools.svg
+        :target: https://pypi.python.org/pypi/vcftools
 
 .. Image showing the PyPi download per month count  - links to PyPI
-.. image:: https://img.shields.io/pypi/dm/comparevcf.svg
-        :target: https://pypi.python.org/pypi/comparevcf
+.. image:: https://img.shields.io/pypi/dm/vcftools.svg
+        :target: https://pypi.python.org/pypi/vcftools
 
 .. Image showing the Travis Continuous Integration test status, commented out for now
-.. .. image:: https://img.shields.io/travis/CFSAN-Biostatistics/comparevcf.svg
-..        :target: https://travis-ci.org/CFSAN-Biostatistics/comparevcf
+.. .. image:: https://img.shields.io/travis/CFSAN-Biostatistics/vcftools.svg
+..        :target: https://travis-ci.org/CFSAN-Biostatistics/vcftools
 
 
 
 Compares the snps in two or more VCF files.
 
-The compare-vcf software was developed by the United States Food 
+The vcftools software was developed by the United States Food 
 and Drug Administration, Center for Food Safety and Applied Nutrition.
 
 * Free software
-* Documentation: https://comparevcf.readthedocs.org.
-* Source Code: https://github.com/CFSAN-Biostatistics/comparevcf
-* PyPI Distribution: https://pypi.python.org/pypi/comparevcf
+* Documentation: https://vcftools.readthedocs.org.
+* Source Code: https://github.com/CFSAN-Biostatistics/vcftools
+* PyPI Distribution: https://pypi.python.org/pypi/vcftools
 
 
 Features
@@ -37,16 +37,16 @@ Features
 * Generates Venn diagrams of all pairs of VCF files.
 
 
-Citing compare-vcf
+Citing vcftools
 --------------------------------------
 
-To cite compare-vcf, please reference the compare-vcf GitHub repository:
+To cite vcftools, please reference the vcftools GitHub repository:
 
-    https://github.com/CFSAN-Biostatistics/comparevcf
+    https://github.com/CFSAN-Biostatistics/vcftools
 
 
 License
 -------
 
-See the LICENSE file included in the compare-vcf distribution.
+See the LICENSE file included in the vcftools distribution.
 

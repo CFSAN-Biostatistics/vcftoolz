@@ -6,7 +6,7 @@ Installation
 
 At the command line::
 
-    $ pip install --user comparevcf
+    $ pip install --user vcftools
 
 Update your .bashrc file with the path to user-installed python packages::
 
@@ -14,21 +14,21 @@ Update your .bashrc file with the path to user-installed python packages::
 
 Or, if you have virtualenvwrapper installed::
 
-    $ mkvirtualenv comparevcf
-    $ pip install comparevcf
+    $ mkvirtualenv vcftools
+    $ pip install vcftools
 
 
-Upgrading compare-vcf
+Upgrading vcftools
 -----------------------------------------
 
 If you previously installed with pip, you can upgrade to the newest version from the command line::
 
-    $ pip install --user --upgrade comparevcf
+    $ pip install --user --upgrade vcftools
 
 
-Uninstalling compare-vcf
+Uninstalling vcftools
 --------------------------------------------
 
 If you installed with pip, you can uninstall from the command line::
 
-    $ pip uninstall comparevcf
+    $ pip uninstall vcftools

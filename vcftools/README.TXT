@@ -1,7 +1,7 @@
 What is in this directory
 -------------------------
 compare-vcf.sh : uses bcftools isec to compare VCF files
-comparevcf.py  : custom python code to compare VCF files
+vcftools.py  : custom python code to compare VCF files
 preprocess.sh  : script to fix issues in the VCF files that prevent comparisons
 
 Issues with VCF Files

@@ -2,9 +2,9 @@
 Usage
 ========
 
-To use compare-vcf::
+To use vcftools::
 
-    comparevcf.py -a file1.vcf file2.vcf ...
+    vcftools.py -a file1.vcf file2.vcf ...
 
 Output is written to stdout.
 
