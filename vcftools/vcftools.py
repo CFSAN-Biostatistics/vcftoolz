@@ -48,7 +48,7 @@ import vcf
 import itertools
 import collections
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
 
 def report_error(message):
     """
@@ -360,25 +360,28 @@ def parse_arguments(system_args):
     Namespace
         Command line arguments are stored as attributes of a Namespace.
     """
-    usage = """Compare and analyze the snps found in multiple input VCF files."""
-
-    parser = argparse.ArgumentParser(description=usage, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-    parser.add_argument(dest="vcf_path_list", type=str, metavar="VcfFile", nargs='+',  help="List of VCF files")
-    parser.add_argument("-a", "--allrecords", action='store_true',      dest="all_records", help="Process all VCF records assuming all records are snp records.")
-    parser.add_argument("-p", "--pass",       action='store_true',      dest="passfilter",  help="Process only the VCF samples or records having PASS FT element or PASS filter.  The filter element is always ignored when samples have the FT element regardless of this option.")
-    parser.add_argument("-t", "--tableFile",  type=str, metavar='FILE', dest="table_file",  help="Tablulate the results in the specified tab-separated-value file.")
+    description = """VCF Tools."""
+    parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--version',          action='version', version='%(prog)s version ' + __version__)
+    subparsers = parser.add_subparsers(dest="subparser_name", help=None, metavar="subcommand       ")
+    subparsers.required = True
+
+    formatter_class = argparse.ArgumentDefaultsHelpFormatter
+
+    description = "Compare and analyze the snps found in multiple input VCF files."
+    subparser = subparsers.add_parser("compare", formatter_class=formatter_class, description=description, help="Compare VCF files.")
+    subparser.add_argument(dest="vcf_path1",     type=str, metavar="VcfFile", nargs=1,  help="VCF file")
+    subparser.add_argument(dest="vcf_path_list", type=str, metavar="VcfFile", nargs='+',  help="VCF file")
+    subparser.add_argument("-a", "--allrecords", action='store_true',      dest="all_records", help="Process all VCF records assuming all records are snp records.")
+    subparser.add_argument("-p", "--pass",       action='store_true',      dest="passfilter",  help="Process only the VCF samples or records having PASS FT element or PASS filter.  The filter element is always ignored when samples have the FT element regardless of this option.")
+    subparser.add_argument("-t", "--tableFile",  type=str, metavar='FILE', dest="table_file",  help="Tablulate the results in the specified tab-separated-value file.")
+    subparser.set_defaults(func=compare)
 
     args = parser.parse_args(system_args)
-    if len(args.vcf_path_list) < 2:
-        parser.print_usage(sys.stderr)
-        print("error: at least 2 files required", file=sys.stderr)
-        sys.exit(1)
     return args
 
 
-def main(args):
+def compare(args):
     """
     Compare and analyze the snps found in two or three input VCF files.
 
@@ -393,6 +396,8 @@ def main(args):
     --------
     parse_arguments()
     """
+    args.vcf_path_list = args.vcf_path1 + args.vcf_path_list
+
     # Validate input files
     bad_files_count = verify_non_empty_input_files("VCF file", args.vcf_path_list)
     if bad_files_count > 0:
@@ -606,6 +611,5 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_arguments(sys.argv[1:])
-    main(args)
-
+    args.func(args)
 
