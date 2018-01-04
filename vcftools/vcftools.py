@@ -316,7 +316,7 @@ def tabulate_results(snp_sets, samples, table_file_path):
             for chrom, pos, sample in snps:
                 key = chrom + str(pos) + sample
                 pos_sample_venn_tag[key] = tag
-                
+
         # Write the header row
         sorted_samples = sorted(samples)
         header_row = ["Chrom", "Pos", "Ref"] + sorted_samples
@@ -549,14 +549,19 @@ def compare(args):
 
     # Generate a venn diagram if the necessary packages are installed
     #generate_venn_diagrams(snp_set_list, base_vcf_file_name_list, 'snps.venn.pdf')
-    if num_vcf_files == 2 or num_vcf_files == 3:
+    if num_vcf_files >= 2 and num_vcf_files <= 6:
         try:
             import matplotlib
             matplotlib.use("Agg")
             from matplotlib import pyplot as plt
+        except:
+            report_error("Skipping venn diagram creation.  Requires matplotlib.")
+            exit(1)
+    if num_vcf_files == 2 or num_vcf_files == 3:
+        try:
             from matplotlib_venn import venn2, venn3, venn3_unweighted, venn2_circles, venn3_circles
         except:
-            report_error("Skipping venn diagram creation.  Requires matplotlib and matplotlib_venn.")
+            report_error("Skipping venn diagram creation.  Requires matplotlib_venn.")
             exit(1)
 
         def colorize_venn2(venn_circles):
@@ -595,18 +600,31 @@ def compare(args):
         make_venn2(snp_set_list, "Venn Diagram of SNPs", "venn2.snps.pdf")
         make_venn2(position_set_list, "Venn Diagram of Positions", "venn2.positions.pdf")
 
-        if num_vcf_files == 3:
-            fig, axes = plt.subplots(2)
-            plt_idx = 0
-            venn3_unweighted(position_set_list, set_labels=base_vcf_file_name_list, ax=axes[plt_idx])
-            axes[plt_idx].set_title("Positions")
-            plt_idx += 1
-            venn3_unweighted(snp_set_list, set_labels=base_vcf_file_name_list, ax=axes[plt_idx])
-            axes[plt_idx].set_title("SNPs")
-            plt.subplots_adjust(hspace=0.5)  # adjust height spacing between subplots
-            plt.show()
-            plt.savefig('venn3.pdf')
-            plt.close()
+    if num_vcf_files >= 3 and num_vcf_files <= 6:
+        from pyvenn import venn
+
+        name_colors = ["black" for i in range(num_vcf_files)]
+        figsize = (5, 8)
+        fontsize = 12
+        titlesize = 14
+        legend_loc = None
+        venn_func_dict = {3:venn.venn3, 4:venn.venn4, 5:venn.venn5, 6:venn.venn6}
+        fig, axes = plt.subplots(1, 2, figsize=(11, 8), tight_layout=True)
+
+        plt_idx = 0
+        labels = venn.get_labels(position_set_list, fill=["number"])
+        venn_func_dict[num_vcf_files](labels, base_vcf_file_name_list, figsize=figsize, fontsize=fontsize, name_colors=name_colors, legend_loc=legend_loc, axes=axes[plt_idx])
+        axes[plt_idx].set_title("Positions", fontsize=titlesize)
+
+        plt_idx += 1
+        labels = venn.get_labels(snp_set_list, fill=["number"])
+        venn_func_dict[num_vcf_files](labels, base_vcf_file_name_list, figsize=figsize, fontsize=fontsize, name_colors=name_colors, legend_loc=legend_loc, axes=axes[plt_idx])
+        axes[plt_idx].set_title("SNPs", fontsize=titlesize)
+
+        plt.subplots_adjust(hspace=0.5)  # adjust height spacing between subplots
+        plt.show()
+        plt.savefig("venn%i.pdf" % num_vcf_files)
+        plt.close()
 
 
 if __name__ == '__main__':
