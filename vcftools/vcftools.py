@@ -48,7 +48,7 @@ import vcf
 import itertools
 import collections
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 def report_error(message):
     """
@@ -627,7 +627,9 @@ def compare(args):
         plt.close()
 
 
-if __name__ == '__main__':
+def main():
     args = parse_arguments(sys.argv[1:])
     args.func(args)
 
+if __name__ == '__main__':
+    main()

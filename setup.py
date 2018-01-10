@@ -26,7 +26,7 @@ test_requirements = [
 
 setup(
     name='vcftools',
-    version='0.1.0',
+    version='0.4.0',
     description="Compares the snps in two or more VCF files.",
     long_description=readme + '\n\n' + history,
     author="Steve Davis",
@@ -55,8 +55,8 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
     ],
+    entry_points={'console_scripts': ['vcftools = vcftools.vcftools:main']},
     scripts=[
-        'vcftools/vcftools.py',
         'scripts/comparevcf.sh',
         'scripts/listvcf.sh',
         'scripts/preprocess.sh',
