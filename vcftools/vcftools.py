@@ -565,14 +565,20 @@ def compare(args):
             exit(1)
 
         def colorize_venn2(venn_circles):
-            colors2 = ['red', 'blue', 'magenta']
-            alpha2 = [0.6, 0.4, 0.1]
+            colors2 = [
+                # r, g, b, a
+                [157, 217, 161],
+                [156, 195, 229],
+                [117, 180, 192],
+            ]
+            colors2 = [[i[0] / 255.0, i[1] / 255.0, i[2] / 255.0] for i in colors2]
+
             venn_circles.get_patch_by_id('10').set_color(colors2[0])
             venn_circles.get_patch_by_id('01').set_color(colors2[1])
             venn_circles.get_patch_by_id('11').set_color(colors2[2])
-            venn_circles.get_patch_by_id('10').set_alpha(alpha2[0])
-            venn_circles.get_patch_by_id('01').set_alpha(alpha2[1])
-            venn_circles.get_patch_by_id('11').set_alpha(alpha2[2])
+            venn_circles.get_patch_by_id('10').set_alpha(1.0)
+            venn_circles.get_patch_by_id('01').set_alpha(1.0)
+            venn_circles.get_patch_by_id('11').set_alpha(1.0)
 
         def make_venn2(set_list, title, output_file):
             """
