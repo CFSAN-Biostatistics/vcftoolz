@@ -41,14 +41,16 @@ compare-vcf.sh
 """
 
 from __future__ import print_function
-import argparse
-import sys
-import os
-import vcf
-import itertools
-import collections
 
-__version__ = '0.4.0'
+import argparse
+import csv
+import collections
+import itertools
+import os
+import sys
+import vcf
+
+__version__ = '0.5.0'
 
 def report_error(message):
     """
@@ -377,6 +379,13 @@ def parse_arguments(system_args):
     subparser.add_argument("-t", "--tableFile",  type=str, metavar='FILE', dest="table_file",  help="Tablulate the results in the specified tab-separated-value file.")
     subparser.set_defaults(func=compare)
 
+    description = "Convert a VCF file into a tab delimited set of snp calls, one per line."
+    subparser = subparsers.add_parser("narrow", formatter_class=formatter_class, description=description, help=description)
+    subparser.add_argument(dest="vcf_path",     type=str, metavar="VcfFile", help="VCF file")
+    subparser.add_argument("-v", "--variants", action="store_true",      dest="only_variants", help="Only emit variants.")
+    subparser.add_argument("-p", "--pass",       action="store_true",      dest="passfilter",  help="Process only the VCF samples or records having PASS FT element or PASS filter.  The filter element is always ignored when samples have the FT element regardless of this option.")
+    subparser.set_defaults(func=narrow_wrapper)
+
     args = parser.parse_args(system_args)
     return args
 
@@ -566,7 +575,7 @@ def compare(args):
 
         def colorize_venn2(venn_circles):
             colors2 = [
-                # r, g, b, a
+                # r, g, b
                 [157, 217, 161],
                 [156, 195, 229],
                 [117, 180, 192],
@@ -632,10 +641,99 @@ def compare(args):
         plt.savefig("venn%i.pdf" % num_vcf_files)
         plt.close()
 
+def narrow_wrapper(args):
+    """
+    Convert a VCF file into a tab delimited set of snp calls, one per line.
+
+    Parameters
+    ----------
+    args : Namespace
+        Command line arguments stored as attributes of a Namespace, usually
+        parsed from sys.argv, but can be set programmatically for unit testing
+        or other purposes.
+
+    See Also
+    --------
+    parse_arguments()
+    """
+    narrow(args.vcf_path, args.only_variants, args.passfilter)
+
+def narrow(vcf_path, only_variants, passfilter):
+    """
+    Convert a VCF file into a tab delimited set of snp calls, one per line.
+
+    Parameters
+    ----------
+    vcf_path : str
+        Path to the VCF file
+    only_variants : bool
+        Only emit variants.
+    passfilter : bool
+        Process only the VCF samples or records having PASS FT element or PASS
+        filter.  The filter element is always ignored when samples have the FT
+        element regardless of this option.
+
+    """
+    if len(vcf_path) > 0:
+        verify_non_empty_input_files("VCF file", [vcf_path])
+        inp = open(vcf_path)
+    else:
+        inp = sys.stdin
+
+    reader = vcf.VCFReader(inp)
+    snps = []
+    for record in reader:
+        for sample in record.samples:
+            # is_variant can be:
+            # None  : gt == .
+            # True  : gt > 0
+            # False : gt == 0
+            if only_variants and sample.is_variant == False:
+                continue
+
+            # Skip the sample if only showing variants and this sample is missing all data (GT will be '.')
+            try:
+                GT = sample.data.GT
+            except:
+                GT = '.'
+            if only_variants and GT == '.' and not any(sample.data[1:]):
+                continue
+
+            # If there are filters per sample, use them
+            if passfilter:
+                try:
+                    FT = sample.data.FT
+                    if FT != "PASS":
+                        continue
+                # Otherwise, use the filter for the whole record
+                except:
+                    if len(record.FILTER) > 0:
+                        continue
+
+            bases = sample.gt_bases
+            if bases is None:
+                bases = '.'
+            elif len(bases) == 3 and bases[0] == bases[2]: # e.g. G/G
+                bases = bases[0]
+            sample_data_list = ['.' if item is None else item for item in sample.data]
+            row = [sample.sample, record.CHROM, int(record.POS), record.REF, bases] + sample_data_list
+            snps.append(row)
+
+    snps = sorted(snps, key=lambda snp: snp[1:3] + snp[0:1]) # sort by chrom, then pos, then sample
+
+    out = csv.writer(sys.stdout, delimiter='\t', lineterminator=os.linesep)
+    header = ["Sample", "CHROM", "POS", "REF", "ALT"]
+    if record:
+        header += record.FORMAT.split(':')
+    out.writerow(header)
+    for row in snps:
+        out.writerow(row)
+
+
 
 def main():
     args = parse_arguments(sys.argv[1:])
     args.func(args)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
