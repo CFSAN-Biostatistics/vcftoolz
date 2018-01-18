@@ -9,7 +9,6 @@ The records and calls are in PyVCF format.
 
 from __future__ import print_function
 
-import os
 import sys
 import vcf
 
