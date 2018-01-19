@@ -5,12 +5,75 @@
 """
 Module to parse vcf files and generate calls with their containing records.
 The records and calls are in PyVCF format.
+
+How to test this module:
+    python -m doctest vcf_call_parser.py
 """
 
 from __future__ import print_function
 
 import sys
 import vcf
+
+def _make_test_vcf_file(test_record):
+    """This is a helper function used to help test various types of calls with the doctest module.
+
+    It creates an in-memory VCF file containing the specified VCF record and returns a file
+    handle ready for parsing by PyVCF.
+
+    Parameters
+    ----------
+    test_record : str
+        VCF record just as it would appear in a VCF file.
+        It may contain multiple genoptype calls.
+
+    Returns
+    -------
+    Open file handle positioned at the start of the in-memory VCF file continung a single
+    VCF record.
+    """
+    if sys.version_info < (3,):
+        from StringIO import StringIO
+    else:
+        from io import StringIO
+    in_memory_file = StringIO()
+    in_memory_file.name = "test.vcf"
+    fields = test_record.split()
+    num_fields = len(fields)
+    if num_fields < 10:
+        raise ValueError("Test VCF record has only %i fields, expecting at least 10" % num_fields)
+    if num_fields == 10:
+        sample_names_str = "SAMPLE"
+    else:
+        sample_names_str = ' '.join("SAMPLE%i" % i for i in range(1, 2+num_fields-10))
+    header_line = "#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT " + sample_names_str
+    print(header_line, file=in_memory_file)
+    print(test_record, file=in_memory_file)
+    in_memory_file.seek(0)
+    return in_memory_file
+
+def _make_test_pyvcf_calls(test_record):
+    """This is a helper function used to help test various types of calls with the doctest module.
+
+    Returns a list of PyVCF records and calls parsed from a specified test VCF record.
+
+    Parameters
+    ----------
+    test_record : str
+        VCF record just as it would appear in a VCF file.
+        It may contain multiple genoptype calls.
+
+    Returns
+    -------
+    list of (record, call) tuples parsed by PyVCF.
+    """
+    in_memory_file = _make_test_vcf_file(test_record)
+    reader = vcf.VCFReader(in_memory_file)
+    calls = []
+    for record in reader:
+        for call in record.samples:
+            calls.append((record, call))
+    return calls
 
 def call_alleles(call):
     """Return a list of the bases in each allele of the specified call.
@@ -47,11 +110,41 @@ def is_snp_call(record, call):
     Returns
     -------
     True if the call is a snp.
+
+    Examples
+    --------
+    >>> # normal snp
+    >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT 1/1:PASS")[0])
+    True
+    >>> # an insertion is not a snp
+    >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . A AT . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # a deletion is not a snp
+    >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . AT A . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # a structural variant is not a snp
+    >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS")[0])
+    False
+    >>> # a ref call is not a snp
+    >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT 0/0:PASS")[0])
+    False
+    >>> # a missing call is not a snp
+    >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . A . . PASS . GT:FT ./.:.")[0])
+    False
+    >>> # a missing call is not a snp
+    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT ./.:.")[0])
+    False
+    >>> # a missing call is not a snp
+    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT .:.")[0])
+    False
     """
     if len(record.REF) > 1:
         return False
 
     if is_ref_call(record, call):
+        return False
+
+    if is_missing_call(record, call):
         return False
 
     for bases in call_alleles(call):
@@ -74,11 +167,42 @@ def is_indel_call(record, call):
     Returns
     -------
     True if the call is an indel.
+
+    Examples
+    --------
+    >>> # normal snp
+    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # insertion
+    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A AT . PASS . GT:FT 1/1:PASS")[0])
+    True
+    >>> # deletion
+    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . AA A . PASS . GT:FT 1/1:PASS")[0])
+    True
+    >>> # a structural variant is not an indel
+    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS")[0])
+    False
+    >>> # a ref call is not an indel
+    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT 0/0:PASS")[0])
+    False
+    >>> # a missing call is not an indel
+    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A . . PASS . GT:FT ./.:.")[0])
+    False
+    >>> # a missing call is not an indel
+    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT ./.:.")[0])
+    False
+    >>> # a missing call is not an indel
+    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT .:.")[0])
+    False
     """
     # it is possible to have a mix of snps and indels, like this:
     # CP006053.1      1502892 .       T       G,TGAGAAAG      14.0234 PASS    .       GT	1/1	1/2
     if is_snp_call(record, call):
         return False
+
+    if is_missing_call(record, call):
+        return False
+
     return record.is_indel
 
 
@@ -95,6 +219,33 @@ def is_other_variant_call(record, call):
     Returns
     -------
     True if the call is a variant, but not a snp or indel.
+
+    Examples
+    --------
+    >>> # a normal snp is not an "other variant"
+    >>> is_other_variant_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # an insertion is not an "other variant"
+    >>> is_other_variant_call(*_make_test_pyvcf_calls("chrom 1 . A AT . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # a deletion is not an "other variant"
+    >>> is_other_variant_call(*_make_test_pyvcf_calls("chrom 1 . AA A . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # structural variant
+    >>> is_other_variant_call(*_make_test_pyvcf_calls("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS")[0])
+    True
+    >>> # a ref call is not an "other variant"
+    >>> is_other_variant_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT 0/0:PASS")[0])
+    False
+    >>> # a missing call is not an "other variant"
+    >>> is_other_variant_call(*_make_test_pyvcf_calls("chrom 1 . A . . PASS . GT:FT ./.:.")[0])
+    False
+    >>> # a missing call is not an "other variant"
+    >>> is_other_variant_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT ./.:.")[0])
+    False
+    >>> # a missing call is not an "other variant"
+    >>> is_other_variant_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT .:.")[0])
+    False
     """
     if is_snp_call(record, call):
         return False
@@ -122,6 +273,33 @@ def is_ref_call(record, call):
     Returns
     -------
     True if the call is a reference call.
+
+    Examples
+    --------
+    >>> # a normal snp is not a ref call
+    >>> is_ref_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # an insertion is not a ref call
+    >>> is_ref_call(*_make_test_pyvcf_calls("chrom 1 . A AT . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # a deletion is not a ref call
+    >>> is_ref_call(*_make_test_pyvcf_calls("chrom 1 . AA A . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # a structural variant is not a ref call
+    >>> is_ref_call(*_make_test_pyvcf_calls("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS")[0])
+    False
+    >>> # ref call
+    >>> is_ref_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT 0/0:PASS")[0])
+    True
+    >>> # a missing call is not a ref call
+    >>> is_ref_call(*_make_test_pyvcf_calls("chrom 1 . A . . PASS . GT:FT ./.:.")[0])
+    False
+    >>> # a missing call is not a ref call
+    >>> is_ref_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT ./.:.")[0])
+    False
+    >>> # a missing call is not a ref call
+    >>> is_ref_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT .:.")[0])
+    False
     """
     return call.gt_type == 0 # homogeneous ref
 
@@ -139,6 +317,30 @@ def is_filtered_call(record, call):
     Returns
     -------
     True if the call is filtered.
+
+    Examples
+    --------
+    >>> # FT and FILTER both PASS
+    >>> is_filtered_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # FT PASS, FILTER not PASS, FT takes priority
+    >>> is_filtered_call(*_make_test_pyvcf_calls("chrom 1 . A T . SOMEFAIL . GT:FT 1/1:PASS")[0])
+    False
+    >>> # FT FAIL, FILTER PASS, FT takes priority
+    >>> is_filtered_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT 1/1:FAIL")[0])
+    True
+    >>> # FT ., FILTER ., considered a PASS
+    >>> is_filtered_call(*_make_test_pyvcf_calls("chrom 1 . A T . . . GT:FT 1/1:.")[0])
+    False
+    >>> # No FT, FILTER PASS
+    >>> is_filtered_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT 1/1")[0])
+    False
+    >>> # No FT, FILTER FAIL
+    >>> is_filtered_call(*_make_test_pyvcf_calls("chrom 1 . A T . FAIL . GT 1/1")[0])
+    True
+    >>> # No FT, FILTER ., considered a PASS
+    >>> is_filtered_call(*_make_test_pyvcf_calls("chrom 1 . A T . . . GT 1/1")[0])
+    False
     """
     try:
         filt = call.data.FT     # If there are filters per sample, use them
@@ -164,26 +366,47 @@ def is_missing_call(record, call):
     Returns
     -------
     True if all the call data is missing
+
+    Examples
+    --------
+    >>> # a normal snp is not a missing call
+    >>> is_missing_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # an insertion is not a missing call
+    >>> is_missing_call(*_make_test_pyvcf_calls("chrom 1 . A AT . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # a deletion is not a missing call
+    >>> is_missing_call(*_make_test_pyvcf_calls("chrom 1 . AA A . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # a structural variant is not a missing call
+    >>> is_missing_call(*_make_test_pyvcf_calls("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS")[0])
+    False
+    >>> # a ref call is not a missing call
+    >>> is_missing_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT 0/0:PASS")[0])
+    False
+    >>> # a missing call
+    >>> is_missing_call(*_make_test_pyvcf_calls("chrom 1 . A . . PASS . GT:FT ./.:.")[0])
+    True
+    >>> # a missing call
+    >>> is_missing_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT ./.:.")[0])
+    True
+    >>> # a missing call
+    >>> is_missing_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT .:.")[0])
+    True
+    >>> # partial data is not a missing call
+    >>> is_missing_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:DP:FT .:30:.")[0])
+    False
     """
     return call.gt_type is None and not any(call.data[1:])
 
 
-def test_call_generator(test_record, exclude_snps=None, exclude_indels=None, exclude_vars=None, exclude_refs=None, exclude_hetero=None, exclude_filtered=None, exclude_missing=None):
-    """This is a helper function used by the doctests to test various types of calls.
+def _test_call_generator(test_record, exclude_snps=None, exclude_indels=None, exclude_vars=None, exclude_refs=None, exclude_hetero=None, exclude_filtered=None, exclude_missing=None):
+    """This is a helper function used to help test parsing and filtering various types of calls with the doctest module.
+
+    It creates an in-memory VCF file containing the specified VCF record and then parses the file with the specified
+    exclusion flags.  The records and calls passing the exclusion filters are printed for the doctest module to inspect.
     """
-    if sys.version_info < (3,):
-        from StringIO import StringIO
-    else:
-        from io import StringIO
-    in_memory_file = StringIO()
-    in_memory_file.name = "test.vcf"
-    fields = test_record.split()
-    if (len(fields) == 10):
-        print("#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT SAMPLE", file=in_memory_file)
-    elif (len(fields) == 11):
-        print("#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT SAMPLE1 SAMPLE2", file=in_memory_file)
-    print(test_record, file=in_memory_file)
-    in_memory_file.seek(0)
+    in_memory_file = _make_test_vcf_file(test_record)
     gen = call_generator(in_memory_file, exclude_snps=exclude_snps, exclude_indels=exclude_indels, exclude_vars=exclude_vars, exclude_refs=exclude_refs, exclude_hetero=exclude_hetero, exclude_filtered=exclude_filtered, exclude_missing=exclude_missing)
     for record, sample in gen:
         print(record, sample)
@@ -221,78 +444,78 @@ def call_generator(input, exclude_snps=False, exclude_indels=False, exclude_vars
     Examples
     --------
     >>> # snp when snps included
-    >>> test_call_generator("chrom 1 . A T . PASS . GT:FT 1/1:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 1/1:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=1/1, FT=PASS))
     >>> # snp when snps excluded
-    >>> test_call_generator("chrom 1 . A T . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
     >>> # indel when snps included
-    >>> test_call_generator("chrom 1 . A AT . PASS . GT:FT 1/1:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A AT . PASS . GT:FT 1/1:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
     >>> # ref call when snps included
-    >>> test_call_generator("chrom 1 . A T . PASS . GT:FT 0/0:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 0/0:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
     >>> # insertion when indels included
-    >>> test_call_generator("chrom 1 . A AT . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A AT . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=A, ALT=[AT]) Call(sample=SAMPLE, CallData(GT=1/1, FT=PASS))
     >>> # insertion when indels excluded
-    >>> test_call_generator("chrom 1 . A AT . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A AT . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
     >>> # deletion when indels included
-    >>> test_call_generator("chrom 1 . AT A . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . AT A . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=AT, ALT=[A]) Call(sample=SAMPLE, CallData(GT=1/1, FT=PASS))
     >>> # deletion when indels excluded
-    >>> test_call_generator("chrom 1 . AT A . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
-    
+    >>> _test_call_generator("chrom 1 . AT A . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+
     >>> # structural variant when "other variants" included
-    >>> test_call_generator("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=False, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=False, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=AT, ALT=[A]) Call(sample=SAMPLE, CallData(GT=1/1, FT=PASS))
     >>> # structural variant when "other variants" excluded
-    >>> test_call_generator("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
-    
+    >>> _test_call_generator("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+
     >>> # ref call when ref calls included
-    >>> test_call_generator("chrom 1 . A T . PASS . GT:FT 0/0:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=False, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 0/0:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=False, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=0/0, FT=PASS))
     >>> # ref call when ref calls excluded
-    >>> test_call_generator("chrom 1 . A T . PASS . GT:FT 0/0:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 0/0:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
     >>> # heterozygous snp call when snps and heterozygous calls included
-    >>> test_call_generator("chrom 1 . A T . PASS . GT:FT 0/1:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=False, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 0/1:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=False, exclude_filtered=True, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=0/1, FT=PASS))
     >>> # heterozygous snp call when snps included, but heterozygous calls excluded
-    >>> test_call_generator("chrom 1 . A T . PASS . GT:FT 0/1:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 0/1:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
     >>> # FT filtered snp when snps and filtered calls included
-    >>> test_call_generator("chrom 1 . A T . PASS . GT:FT 1/1:FAIL", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=False, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 1/1:FAIL", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=False, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=1/1, FT=FAIL))
     >>> # FT filtered snp when snps included, but filtered calls excluded
-    >>> test_call_generator("chrom 1 . A T . PASS . GT:FT 1/1:FAIL", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 1/1:FAIL", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
     >>> # FILTER filtered snp when snps and filtered calls included
-    >>> test_call_generator("chrom 1 . A T . FAIL . GT 1/1", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=False, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A T . FAIL . GT 1/1", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=False, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=1/1))
     >>> # FILTER filtered snp when snps included, but filtered calls excluded
-    >>> test_call_generator("chrom 1 . A T . FAIL . GT 1/1", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A T . FAIL . GT 1/1", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
     >>> # missing call when missing calls included
-    >>> test_call_generator("chrom 1 . A T . PASS . GT:DP:FT ./.:.:.", exclude_snps=False, exclude_indels=False, exclude_vars=False, exclude_refs=False, exclude_hetero=False, exclude_filtered=False, exclude_missing=False)
+    >>> _test_call_generator("chrom 1 . A T . PASS . GT:DP:FT ./.:.:.", exclude_snps=False, exclude_indels=False, exclude_vars=False, exclude_refs=False, exclude_hetero=False, exclude_filtered=False, exclude_missing=False)
     Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=./., DP=None, FT=None))
-    >>> test_call_generator("chrom 1 . A T . PASS . GT:DP:FT .:.:.", exclude_snps=False, exclude_indels=False, exclude_vars=False, exclude_refs=False, exclude_hetero=False, exclude_filtered=False, exclude_missing=False)
+    >>> _test_call_generator("chrom 1 . A T . PASS . GT:DP:FT .:.:.", exclude_snps=False, exclude_indels=False, exclude_vars=False, exclude_refs=False, exclude_hetero=False, exclude_filtered=False, exclude_missing=False)
     Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=., DP=None, FT=None))
     >>> # missing call when missing calls excluded
-    >>> test_call_generator("chrom 1 . A T . PASS . GT:DP:FT ./.:.:.", exclude_snps=False, exclude_indels=False, exclude_vars=False, exclude_refs=False, exclude_hetero=False, exclude_filtered=False, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A T . PASS . GT:DP:FT ./.:.:.", exclude_snps=False, exclude_indels=False, exclude_vars=False, exclude_refs=False, exclude_hetero=False, exclude_filtered=False, exclude_missing=True)
 
-    >>> test_call_generator("chrom 1 . A T . PASS . GT:DP:FT .:.:.", exclude_snps=False, exclude_indels=False, exclude_vars=False, exclude_refs=False, exclude_hetero=False, exclude_filtered=False, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . A T . PASS . GT:DP:FT .:.:.", exclude_snps=False, exclude_indels=False, exclude_vars=False, exclude_refs=False, exclude_hetero=False, exclude_filtered=False, exclude_missing=True)
 
     >>> # mix of snps and indels in same record
-    >>> test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=1/1, FT=PASS))
-    >>> test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=True, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=True, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE2, CallData(GT=2/2, FT=PASS))
-    >>> test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=False, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=False, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=1/1, FT=PASS))
     Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE2, CallData(GT=2/2, FT=PASS))
-    >>> test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 2/2:PASS 1/1:PASS", exclude_snps=False, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    >>> _test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 2/2:PASS 1/1:PASS", exclude_snps=False, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=2/2, FT=PASS))
     Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE2, CallData(GT=1/1, FT=PASS))
     """
