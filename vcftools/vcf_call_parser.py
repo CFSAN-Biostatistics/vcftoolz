@@ -12,6 +12,26 @@ from __future__ import print_function
 import sys
 import vcf
 
+def call_alleles(call):
+    """Return a list of the bases in each allele of the specified call.
+
+    Parameters
+    ----------
+    call : pyvcf call
+        Genotype call parsed by PyVCF.
+
+    Returns
+    -------
+    alleles : list of str
+        List of bases with one entry per allele.  For a diploid call, there will be two strings.
+        It is possible (and likely) there may be duplicate strings in the list.
+    """
+    if call.gt_bases is None:
+        return '.'
+
+    alleles = call.gt_bases.split(call.gt_phase_char())
+    return alleles
+
 def is_snp_call(record, call):
     """Return True if a sample call is a snp.
 
@@ -34,8 +54,7 @@ def is_snp_call(record, call):
     if is_ref_call(record, call):
         return False
 
-    alleles = call.gt_bases.split(call.gt_phase_char())
-    for bases in alleles:
+    for bases in call_alleles(call):
         if len(bases) > 1:
             return False
 
@@ -44,8 +63,6 @@ def is_snp_call(record, call):
 
 def is_indel_call(record, call):
     """Return True if a sample call is an insertion or deletion.
-
-    An indel is a call where ...
 
     Parameters
     ----------
@@ -58,6 +75,10 @@ def is_indel_call(record, call):
     -------
     True if the call is an indel.
     """
+    # it is possible to have a mix of snps and indels, like this:
+    # CP006053.1      1502892 .       T       G,TGAGAAAG      14.0234 PASS    .       GT	1/1	1/2
+    if is_snp_call(record, call):
+        return False
     return record.is_indel
 
 
@@ -90,8 +111,6 @@ def is_other_variant_call(record, call):
 
 def is_ref_call(record, call):
     """Return True if a sample call is a reference call.
-
-    An ref call is a call where ...
 
     Parameters
     ----------
@@ -158,7 +177,11 @@ def test_call_generator(test_record, exclude_snps=None, exclude_indels=None, exc
         from io import StringIO
     in_memory_file = StringIO()
     in_memory_file.name = "test.vcf"
-    print("#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT SAMPLE", file=in_memory_file)
+    fields = test_record.split()
+    if (len(fields) == 10):
+        print("#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT SAMPLE", file=in_memory_file)
+    elif (len(fields) == 11):
+        print("#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT SAMPLE1 SAMPLE2", file=in_memory_file)
     print(test_record, file=in_memory_file)
     in_memory_file.seek(0)
     gen = call_generator(in_memory_file, exclude_snps=exclude_snps, exclude_indels=exclude_indels, exclude_vars=exclude_vars, exclude_refs=exclude_refs, exclude_hetero=exclude_hetero, exclude_filtered=exclude_filtered, exclude_missing=exclude_missing)
@@ -261,12 +284,22 @@ def call_generator(input, exclude_snps=False, exclude_indels=False, exclude_vars
 
     >>> test_call_generator("chrom 1 . A T . PASS . GT:DP:FT .:.:.", exclude_snps=False, exclude_indels=False, exclude_vars=False, exclude_refs=False, exclude_hetero=False, exclude_filtered=False, exclude_missing=True)
 
+    >>> # mix of snps and indels in same record
+    >>> test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=1/1, FT=PASS))
+    >>> test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=True, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE2, CallData(GT=2/2, FT=PASS))
+    >>> test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=False, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=1/1, FT=PASS))
+    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE2, CallData(GT=2/2, FT=PASS))
+    >>> test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 2/2:PASS 1/1:PASS", exclude_snps=False, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
+    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=2/2, FT=PASS))
+    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE2, CallData(GT=1/1, FT=PASS))
     """
     reader = vcf.VCFReader(input)
     for record in reader:
         for call in record.samples:
             # All calls are included by default, unless explicitly excluded
-            #print(is_snp_call(record, call), call, file=sys.stdout)
             if exclude_snps and is_snp_call(record, call):
                 continue
             if exclude_indels and is_indel_call(record, call):
