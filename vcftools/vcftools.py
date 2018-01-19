@@ -49,8 +49,9 @@ import itertools
 import os
 import sys
 import vcf
+from vcftools.vcf_call_parser import call_alleles, call_generator
 
-__version__ = '0.5.0'
+__version__ = '0.6.0'
 
 def report_error(message):
     """
@@ -370,7 +371,7 @@ def parse_arguments(system_args):
 
     formatter_class = argparse.ArgumentDefaultsHelpFormatter
 
-    description = "Compare and analyze the snps found in multiple input VCF files."
+    description = "Compare and analyze the variants found in multiple input VCF files."
     subparser = subparsers.add_parser("compare", formatter_class=formatter_class, description=description, help="Compare VCF files.")
     subparser.add_argument(dest="vcf_path1",     type=str, metavar="VcfFile", nargs=1,  help="VCF file")
     subparser.add_argument(dest="vcf_path_list", type=str, metavar="VcfFile", nargs='+',  help="VCF file")
@@ -379,11 +380,18 @@ def parse_arguments(system_args):
     subparser.add_argument("-t", "--tableFile",  type=str, metavar='FILE', dest="table_file",  help="Tablulate the results in the specified tab-separated-value file.")
     subparser.set_defaults(func=compare)
 
-    description = "Convert a VCF file into a tab delimited set of snp calls, one per line."
+    description = "Convert a VCF file into a tab delimited set of variant calls, one per line."
     subparser = subparsers.add_parser("narrow", formatter_class=formatter_class, description=description, help=description)
-    subparser.add_argument(dest="vcf_path",     type=str, metavar="VcfFile", help="VCF file")
-    subparser.add_argument("-v", "--variants", action="store_true",      dest="only_variants", help="Only emit variants.")
-    subparser.add_argument("-p", "--pass",       action="store_true",      dest="passfilter",  help="Process only the VCF samples or records having PASS FT element or PASS filter.  The filter element is always ignored when samples have the FT element regardless of this option.")
+    subparser.add_argument(dest="vcf_path", type=str, metavar="VcfFile", help="VCF file")
+    subparser.add_argument("--exclude_snps",     action="store_true", dest="exclude_snps",     help="Exclude snp calls.")
+    subparser.add_argument("--exclude_indels",   action="store_true", dest="exclude_indels",   help="Exclude insertions and deletions.")
+    subparser.add_argument("--exclude_vars",     action="store_true", dest="exclude_vars",     help="Exclude variants other than snps and indels.")
+    subparser.add_argument("--exclude_refs",     action="store_true", dest="exclude_refs",     help="Exclude reference calls.")
+    subparser.add_argument("--exclude_hetero",   action="store_true", dest="exclude_hetero",   help="Exclude heterogenous calls.")
+    subparser.add_argument("--exclude_filtered", action="store_true", dest="exclude_filtered", help="Exclude filtered calls (FT or FILTER is not PASS).")
+    subparser.add_argument("--exclude_missing",  action="store_true", dest="exclude_missing",  help="Exclude calls with all data elements missing.")
+
+
     subparser.set_defaults(func=narrow_wrapper)
 
     args = parser.parse_args(system_args)
@@ -656,68 +664,56 @@ def narrow_wrapper(args):
     --------
     parse_arguments()
     """
-    narrow(args.vcf_path, args.only_variants, args.passfilter)
+    narrow(args.vcf_path, args.exclude_snps, args.exclude_indels, args.exclude_vars, args.exclude_refs, args.exclude_hetero, args.exclude_filtered, args.exclude_missing)
 
-def narrow(vcf_path, only_variants, passfilter):
+def narrow(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
     """
     Convert a VCF file into a tab delimited set of snp calls, one per line.
+
+    By default, all calls are included in the output.
 
     Parameters
     ----------
     vcf_path : str
         Path to the VCF file
-    only_variants : bool
-        Only emit variants.
-    passfilter : bool
-        Process only the VCF samples or records having PASS FT element or PASS
-        filter.  The filter element is always ignored when samples have the FT
-        element regardless of this option.
+    exclude_snps : bool
+        Exclude snp calls.
+    exclude_indels : bool
+        Exclude insertions and deletions.
+    exclude_vars : bool
+        Exclude variants other than snps and indels.
+    exclude_refs : bool
+        Exclude reference calls.
+    exclude_hetero : bool
+        Exclude heterogenous calls.
+    exclude_filtered : bool
+        Exclude filtered calls (FT or FILTER is not PASS).
+    exclude_missing : bool
+        Exclude calls with all data elements missing.
 
     """
     if len(vcf_path) > 0:
         verify_non_empty_input_files("VCF file", [vcf_path])
-        inp = open(vcf_path)
+        input = open(vcf_path)
     else:
-        inp = sys.stdin
+        input = sys.stdin
 
-    reader = vcf.VCFReader(inp)
     snps = []
-    for record in reader:
-        for sample in record.samples:
-            # is_variant can be:
-            # None  : gt == .
-            # True  : gt > 0
-            # False : gt == 0
-            if only_variants and sample.is_variant == False:
-                continue
-
-            # Skip the sample if only showing variants and this sample is missing all data (GT will be '.')
-            try:
-                GT = sample.data.GT
-            except:
-                GT = '.'
-            if only_variants and GT == '.' and not any(sample.data[1:]):
-                continue
-
-            # If there are filters per sample, use them
-            if passfilter:
-                try:
-                    FT = sample.data.FT
-                    if FT != "PASS":
-                        continue
-                # Otherwise, use the filter for the whole record
-                except:
-                    if len(record.FILTER) > 0:
-                        continue
-
-            bases = sample.gt_bases
-            if bases is None:
-                bases = '.'
-            elif len(bases) == 3 and bases[0] == bases[2]: # e.g. G/G
-                bases = bases[0]
-            sample_data_list = ['.' if item is None else item for item in sample.data]
-            row = [sample.sample, record.CHROM, int(record.POS), record.REF, bases] + sample_data_list
-            snps.append(row)
+    for record, call in call_generator(input, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
+        if call.gt_bases is None:
+            bases = '.'
+        else:
+            alleles = call_alleles(call)
+            unique_alleles = []
+            for allele in alleles:
+                if allele not in unique_alleles:
+                    unique_alleles.append(allele)
+            bases = ','.join(unique_alleles)
+            alt_list = [str(variant) for variant in record.ALT]
+            bases = ','.join(alt_list)
+        call_data_list = ['.' if item is None else item for item in call.data]
+        row = [call.sample, record.CHROM, int(record.POS), record.REF, bases] + call_data_list
+        snps.append(row)
 
     snps = sorted(snps, key=lambda snp: snp[1:3] + snp[0:1]) # sort by chrom, then pos, then sample
 
