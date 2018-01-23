@@ -532,14 +532,26 @@ def call_generator(input, exclude_snps=False, exclude_indels=False, exclude_vars
     >>> _test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 2/2:PASS 1/1:PASS", exclude_snps=False, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=2/2, FT=PASS))
     Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE2, CallData(GT=1/1, FT=PASS))
+
+    >>> # mix of heterogeneous snps and indels in same call
+    >>> _test_call_generator("chrom 2 . T G,TGA . PASS . GT:FT 1/2:PASS", exclude_snps=False, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=False, exclude_filtered=True, exclude_missing=True)
+    Record(CHROM=chrom, POS=2, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE, CallData(GT=1/2, FT=PASS))
+    >>> _test_call_generator("chrom 2 . T G,TGA . PASS . GT:FT 1/2:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=False, exclude_filtered=True, exclude_missing=True)
+    Record(CHROM=chrom, POS=2, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE, CallData(GT=1/2, FT=PASS))
+    >>> _test_call_generator("chrom 2 . T G,TGA . PASS . GT:FT 1/2:PASS", exclude_snps=True, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=False, exclude_filtered=True, exclude_missing=True)
+    Record(CHROM=chrom, POS=2, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE, CallData(GT=1/2, FT=PASS))
+    >>> _test_call_generator("chrom 2 . T G,TGA . PASS . GT:FT 1/2:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=False, exclude_filtered=True, exclude_missing=True)
+
     """
     reader = vcf.VCFReader(input)
     for record in reader:
         for call in record.samples:
             # All calls are included by default, unless explicitly excluded
-            if exclude_snps and is_snp_call(record, call):
+            # A call with both snp and indel is not excluded unless both snps and indels are excluded
+            keep_snp_and_indel_mix = not (exclude_snps and exclude_indels) and is_snp_call(record, call) and is_indel_call(record, call)
+            if not keep_snp_and_indel_mix and exclude_snps and is_snp_call(record, call):
                 continue
-            if exclude_indels and is_indel_call(record, call):
+            if not keep_snp_and_indel_mix and exclude_indels and is_indel_call(record, call):
                 continue
             if exclude_vars and is_other_variant_call(record, call):
                 continue
