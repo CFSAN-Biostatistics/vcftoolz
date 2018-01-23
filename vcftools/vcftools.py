@@ -703,12 +703,6 @@ def narrow(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, e
         if call.gt_bases is None:
             bases = '.'
         else:
-            alleles = call_alleles(call)
-            unique_alleles = []
-            for allele in alleles:
-                if allele not in unique_alleles:
-                    unique_alleles.append(allele)
-            bases = ','.join(unique_alleles)
             alt_list = [str(variant) for variant in record.ALT]
             bases = ','.join(alt_list)
         call_data_list = ['.' if item is None else item for item in call.data]
