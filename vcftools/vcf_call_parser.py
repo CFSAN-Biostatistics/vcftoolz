@@ -90,7 +90,7 @@ def call_alleles(call):
         It is possible (and likely) there may be duplicate strings in the list.
     """
     if call.gt_bases is None:
-        return '.'
+        return ['.']
 
     alleles = call.gt_bases.split(call.gt_phase_char())
     return alleles

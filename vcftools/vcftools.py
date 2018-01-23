@@ -262,12 +262,10 @@ def get_snp_list(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_r
         format_dict = dict()
         call_dict = dict()
         for record, call in call_generator(input, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
-            bases = call.gt_bases
-            # TODO: fix this -- there might be a variant more complex than just a snp
-            if bases is None:
-                bases = '.'
-            elif len(bases) == 3 and bases[0] == bases[2]: # e.g. G/G
-                bases = bases[0]
+            if call.is_het:
+                bases = call.gt_bases or '.' # heterogeneous
+            else:
+                bases = call_alleles(call)[0] # homogeneous
             if bases == "N":
                 continue
             snp = SnpTuple(record.CHROM, int(record.POS), record.REF, bases, call.sample)
