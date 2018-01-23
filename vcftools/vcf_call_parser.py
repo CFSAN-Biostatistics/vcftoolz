@@ -122,6 +122,9 @@ def is_snp_call(record, call):
     >>> # a deletion is not a snp
     >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . AT A . PASS . GT:FT 1/1:PASS")[0])
     False
+    >>> # a heterogeneous snp and insertion together is a snp because at least one is a snp
+    >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . A G,AT . PASS . GT:FT 1/2:PASS")[0])
+    True
     >>> # a structural variant is not a snp
     >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS")[0])
     False
@@ -147,11 +150,11 @@ def is_snp_call(record, call):
     if is_missing_call(record, call):
         return False
 
-    for bases in call_alleles(call):
-        if len(bases) > 1:
-            return False
+    # At least one snp
+    if any([len(bases) == 1 for bases in call_alleles(call)]):
+        return True
 
-    return True
+    return False
 
 
 def is_indel_call(record, call):
@@ -170,7 +173,7 @@ def is_indel_call(record, call):
 
     Examples
     --------
-    >>> # normal snp
+    >>> # a normal snp is not an indel
     >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT 1/1:PASS")[0])
     False
     >>> # insertion
@@ -178,6 +181,9 @@ def is_indel_call(record, call):
     True
     >>> # deletion
     >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . AA A . PASS . GT:FT 1/1:PASS")[0])
+    True
+    >>> # a heterogeneous snp and insertion together is an indel because at least one is an indel
+    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A G,AT . PASS . GT:FT 1/2:PASS")[0])
     True
     >>> # a structural variant is not an indel
     >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS")[0])
@@ -195,15 +201,23 @@ def is_indel_call(record, call):
     >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT .:.")[0])
     False
     """
-    # it is possible to have a mix of snps and indels, like this:
-    # CP006053.1      1502892 .       T       G,TGAGAAAG      14.0234 PASS    .       GT	1/1	1/2
-    if is_snp_call(record, call):
-        return False
-
     if is_missing_call(record, call):
         return False
 
-    return record.is_indel
+    if not record.is_indel:
+        return False
+
+    if record.is_sv:
+        return False
+
+    if len(record.REF) > 1:
+        return True
+
+    # At least one
+    if any([len(bases) > 1 for bases in call_alleles(call)]):
+        return True
+
+    return False
 
 
 def is_other_variant_call(record, call):
@@ -507,7 +521,7 @@ def call_generator(input, exclude_snps=False, exclude_indels=False, exclude_vars
 
     >>> _test_call_generator("chrom 1 . A T . PASS . GT:DP:FT .:.:.", exclude_snps=False, exclude_indels=False, exclude_vars=False, exclude_refs=False, exclude_hetero=False, exclude_filtered=False, exclude_missing=True)
 
-    >>> # mix of snps and indels in same record
+    >>> # mix of snps and indels in same record, all calls are homogeneous
     >>> _test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=1/1, FT=PASS))
     >>> _test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=True, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
