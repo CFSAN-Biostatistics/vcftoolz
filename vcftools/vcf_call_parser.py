@@ -135,10 +135,10 @@ def is_snp_call(record, call):
     >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . A . . PASS . GT:FT ./.:.")[0])
     False
     >>> # a missing call is not a snp
-    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT ./.:.")[0])
+    >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT ./.:.")[0])
     False
     >>> # a missing call is not a snp
-    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT .:.")[0])
+    >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT .:.")[0])
     False
     """
     if len(record.REF) > 1:
