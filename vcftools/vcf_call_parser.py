@@ -86,7 +86,7 @@ def call_alleles(call):
     Returns
     -------
     alleles : list of str
-        List of bases with one entry per allele.  For a diploid call, there will be two strings.
+        List of bases with one entry per allele.  For a diploid call, there will be a list of two strings.
         It is possible (and likely) there may be duplicate strings in the list.
     """
     if call.gt_bases is None:
@@ -122,7 +122,13 @@ def is_snp_call(record, call):
     >>> # a deletion is not a snp
     >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . AT A . PASS . GT:FT 1/1:PASS")[0])
     False
-    >>> # a heterogeneous snp and insertion together is a snp because at least one is a snp
+    >>> # a homozygous spanning deletion (*) is not a snp
+    >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . A * . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # a heterozygous spanning deletion (*) and snp together is a snp because at least one is a snp
+    >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . A *,G . PASS . GT:FT 1/2:PASS")[0])
+    True
+    >>> # a heterozygous snp and insertion together is a snp because at least one is a snp
     >>> is_snp_call(*_make_test_pyvcf_calls("chrom 1 . A G,AT . PASS . GT:FT 1/2:PASS")[0])
     True
     >>> # a structural variant is not a snp
@@ -151,7 +157,7 @@ def is_snp_call(record, call):
         return False
 
     # At least one snp
-    if any([len(bases) == 1 for bases in call_alleles(call)]):
+    if any([bases in ['A', 'C', 'G', 'T', 'N'] for bases in call_alleles(call)]):
         return True
 
     return False
@@ -182,7 +188,13 @@ def is_indel_call(record, call):
     >>> # deletion
     >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . AA A . PASS . GT:FT 1/1:PASS")[0])
     True
-    >>> # a heterogeneous snp and insertion together is an indel because at least one is an indel
+    >>> # a homozygous spanning deletion (*) is an indel
+    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A * . PASS . GT:FT 1/1:PASS")[0])
+    True
+    >>> # a heterozygous spanning deletion (*) and snp together is an indel because at least one is an indel
+    >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A *,G . PASS . GT:FT 1/2:PASS")[0])
+    True
+    >>> # a heterozygous snp and insertion together is an indel because at least one is an indel
     >>> is_indel_call(*_make_test_pyvcf_calls("chrom 1 . A G,AT . PASS . GT:FT 1/2:PASS")[0])
     True
     >>> # a structural variant is not an indel
@@ -204,6 +216,12 @@ def is_indel_call(record, call):
     if is_missing_call(record, call):
         return False
 
+    alleles = call_alleles(call)
+
+    # At least one spanning deletion
+    if any([bases == '*' for bases in alleles]):
+        return True
+
     if not record.is_indel:
         return False
 
@@ -213,8 +231,8 @@ def is_indel_call(record, call):
     if len(record.REF) > 1:
         return True
 
-    # At least one
-    if any([len(bases) > 1 for bases in call_alleles(call)]):
+    # At least one indel
+    if any([len(bases) > 1 for bases in alleles]):
         return True
 
     return False
@@ -244,6 +262,12 @@ def is_other_variant_call(record, call):
     False
     >>> # a deletion is not an "other variant"
     >>> is_other_variant_call(*_make_test_pyvcf_calls("chrom 1 . AA A . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # a homozygous spanning deletion (*) is not an "other variant"
+    >>> is_other_variant_call(*_make_test_pyvcf_calls("chrom 1 . A * . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # a heterozygous spanning deletion (*) and snp together is not an "other variant"
+    >>> is_other_variant_call(*_make_test_pyvcf_calls("chrom 1 . A *,G . PASS . GT:FT 1/2:PASS")[0])
     False
     >>> # structural variant
     >>> is_other_variant_call(*_make_test_pyvcf_calls("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS")[0])
@@ -298,6 +322,12 @@ def is_ref_call(record, call):
     False
     >>> # a deletion is not a ref call
     >>> is_ref_call(*_make_test_pyvcf_calls("chrom 1 . AA A . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # a homozygous spanning deletion (*) is not a ref call
+    >>> is_ref_call(*_make_test_pyvcf_calls("chrom 1 . A * . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # a heterozygous spanning deletion (*) and snp together is not a ref call
+    >>> is_ref_call(*_make_test_pyvcf_calls("chrom 1 . A *,G . PASS . GT:FT 1/2:PASS")[0])
     False
     >>> # a structural variant is not a ref call
     >>> is_ref_call(*_make_test_pyvcf_calls("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS")[0])
@@ -391,6 +421,12 @@ def is_missing_call(record, call):
     False
     >>> # a deletion is not a missing call
     >>> is_missing_call(*_make_test_pyvcf_calls("chrom 1 . AA A . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # a homozygous spanning deletion (*) is not a missing call
+    >>> is_missing_call(*_make_test_pyvcf_calls("chrom 1 . A * . PASS . GT:FT 1/1:PASS")[0])
+    False
+    >>> # a heterozygous spanning deletion (*) and snp together is not a missing call
+    >>> is_missing_call(*_make_test_pyvcf_calls("chrom 1 . A *,G . PASS . GT:FT 1/2:PASS")[0])
     False
     >>> # a structural variant is not a missing call
     >>> is_missing_call(*_make_test_pyvcf_calls("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS")[0])
