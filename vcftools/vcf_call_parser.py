@@ -345,7 +345,7 @@ def is_ref_call(record, call):
     >>> is_ref_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT .:.")[0])
     False
     """
-    return call.gt_type == 0 # homogeneous ref
+    return call.gt_type == 0 # homozygous ref
 
 
 def is_filtered_call(record, call):
@@ -557,7 +557,7 @@ def call_generator(input, exclude_snps=False, exclude_indels=False, exclude_vars
 
     >>> _test_call_generator("chrom 1 . A T . PASS . GT:DP:FT .:.:.", exclude_snps=False, exclude_indels=False, exclude_vars=False, exclude_refs=False, exclude_hetero=False, exclude_filtered=False, exclude_missing=True)
 
-    >>> # mix of snps and indels in same record, all calls are homogeneous
+    >>> # mix of snps and indels in same record, all calls are homozygous
     >>> _test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
     Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=1/1, FT=PASS))
     >>> _test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=True, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
@@ -569,7 +569,7 @@ def call_generator(input, exclude_snps=False, exclude_indels=False, exclude_vars
     Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=2/2, FT=PASS))
     Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE2, CallData(GT=1/1, FT=PASS))
 
-    >>> # mix of heterogeneous snps and indels in same call
+    >>> # mix of heterozygous snps and indels in same call
     >>> _test_call_generator("chrom 2 . T G,TGA . PASS . GT:FT 1/2:PASS", exclude_snps=False, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=False, exclude_filtered=True, exclude_missing=True)
     Record(CHROM=chrom, POS=2, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE, CallData(GT=1/2, FT=PASS))
     >>> _test_call_generator("chrom 2 . T G,TGA . PASS . GT:FT 1/2:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=False, exclude_filtered=True, exclude_missing=True)

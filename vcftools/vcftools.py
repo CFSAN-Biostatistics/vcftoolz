@@ -241,7 +241,7 @@ def get_snp_list(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_r
     exclude_refs : bool
         Exclude reference calls.
     exclude_hetero : bool
-        Exclude heterogeneous calls.
+        Exclude heterozygous calls.
     exclude_filtered : bool
         Exclude filtered calls (FT or FILTER is not PASS).
     exclude_missing : bool
@@ -263,9 +263,9 @@ def get_snp_list(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_r
         call_dict = dict()
         for record, call in call_generator(input, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
             if call.is_het:
-                bases = call.gt_bases or '.' # heterogeneous
+                bases = call.gt_bases or '.' # heterozygous
             else:
-                bases = call_alleles(call)[0] # homogeneous
+                bases = call_alleles(call)[0] # homozygous
             if bases == "N":
                 continue
             snp = SnpTuple(record.CHROM, int(record.POS), record.REF, bases, call.sample)
@@ -364,11 +364,11 @@ def parse_arguments(system_args):
     subparser = subparsers.add_parser("compare", formatter_class=formatter_class, description=description, help="Compare VCF files.")
     subparser.add_argument(dest="vcf_path1",     type=str, metavar="VcfFile", nargs=1,  help="VCF file")
     subparser.add_argument(dest="vcf_path_list", type=str, metavar="VcfFile", nargs='+',  help="VCF file")
-    subparser.add_argument("--exclude_snps",     action="store_true", dest="exclude_snps",     help="Exclude snp calls. A heterogeneous call with both snp and indel is not excluded unless both snps and indels are excluded.")
-    subparser.add_argument("--exclude_indels",   action="store_true", dest="exclude_indels",   help="Exclude insertions and deletions. A heterogeneous call with both snp and indel is not excluded unless both snps and indels are excluded.")
+    subparser.add_argument("--exclude_snps",     action="store_true", dest="exclude_snps",     help="Exclude snp calls. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
+    subparser.add_argument("--exclude_indels",   action="store_true", dest="exclude_indels",   help="Exclude insertions and deletions. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
     subparser.add_argument("--exclude_vars",     action="store_true", dest="exclude_vars",     help="Exclude variants other than snps and indels.")
     subparser.add_argument("--exclude_refs",     action="store_true", dest="exclude_refs",     help="Exclude reference calls.")
-    subparser.add_argument("--exclude_hetero",   action="store_true", dest="exclude_hetero",   help="Exclude heterogeneous calls.")
+    subparser.add_argument("--exclude_hetero",   action="store_true", dest="exclude_hetero",   help="Exclude heterozygous calls.")
     subparser.add_argument("--exclude_filtered", action="store_true", dest="exclude_filtered", help="Exclude filtered calls (FT or FILTER is not PASS).")
     subparser.add_argument("--exclude_missing",  action="store_true", dest="exclude_missing",  help="Exclude calls with all data elements missing.")
     subparser.add_argument("-t", "--tableFile",  type=str, metavar='FILE', dest="table_file",  help="Tablulate the results in the specified tab-separated-value file.")
@@ -377,11 +377,11 @@ def parse_arguments(system_args):
     description = "Convert a VCF file into a tab delimited set of variant calls, one per line."
     subparser = subparsers.add_parser("narrow", formatter_class=formatter_class, description=description, help=description)
     subparser.add_argument(dest="vcf_path", type=str, metavar="VcfFile", help="VCF file")
-    subparser.add_argument("--exclude_snps",     action="store_true", dest="exclude_snps",     help="Exclude snp calls. A heterogeneous call with both snp and indel is not excluded unless both snps and indels are excluded.")
-    subparser.add_argument("--exclude_indels",   action="store_true", dest="exclude_indels",   help="Exclude insertions and deletions. A heterogeneous call with both snp and indel is not excluded unless both snps and indels are excluded.")
+    subparser.add_argument("--exclude_snps",     action="store_true", dest="exclude_snps",     help="Exclude snp calls. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
+    subparser.add_argument("--exclude_indels",   action="store_true", dest="exclude_indels",   help="Exclude insertions and deletions. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
     subparser.add_argument("--exclude_vars",     action="store_true", dest="exclude_vars",     help="Exclude variants other than snps and indels.")
     subparser.add_argument("--exclude_refs",     action="store_true", dest="exclude_refs",     help="Exclude reference calls.")
-    subparser.add_argument("--exclude_hetero",   action="store_true", dest="exclude_hetero",   help="Exclude heterogeneous calls.")
+    subparser.add_argument("--exclude_hetero",   action="store_true", dest="exclude_hetero",   help="Exclude heterozygous calls.")
     subparser.add_argument("--exclude_filtered", action="store_true", dest="exclude_filtered", help="Exclude filtered calls (FT or FILTER is not PASS).")
     subparser.add_argument("--exclude_missing",  action="store_true", dest="exclude_missing",  help="Exclude calls with all data elements missing.")
     subparser.set_defaults(func=narrow_wrapper)
@@ -427,7 +427,7 @@ def compare(vcf_path_list, exclude_snps, exclude_indels, exclude_vars, exclude_r
     exclude_refs : bool
         Exclude reference calls.
     exclude_hetero : bool
-        Exclude heterogeneous calls.
+        Exclude heterozygous calls.
     exclude_filtered : bool
         Exclude filtered calls (FT or FILTER is not PASS).
     exclude_missing : bool
@@ -710,7 +710,7 @@ def narrow(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, e
     exclude_refs : bool
         Exclude reference calls.
     exclude_hetero : bool
-        Exclude heterogeneous calls.
+        Exclude heterozygous calls.
     exclude_filtered : bool
         Exclude filtered calls (FT or FILTER is not PASS).
     exclude_missing : bool
