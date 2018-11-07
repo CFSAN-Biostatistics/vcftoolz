@@ -49,3 +49,6 @@ docs/_build
 *.qry
 isec-out
 output
+
+# Other
+testing

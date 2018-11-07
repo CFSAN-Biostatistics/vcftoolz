@@ -3,41 +3,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Script to compare VCF files.
-
-Inputs
-------
-two or more VCF files
-
-Outputs
--------
-* metrics per VCF file
-* lists of snps exclusively found per VCF file
-* Venn Diagram
-* parsimony trees, one per input VCF file (planned for future release)
-
-Errors Reported
----------------
-* Sample names are not the same and are not compareable
-* Different numnber of samples
-
-Other Related Scripts
-----------------------
-compare-vcf.sh
-    This script runs bcftools isec to compare two vcf files.
-    it compresses and indexes the vcf files as needed for isec.
-
-~/mnt/gnome3/DropBox/Steve/wgs-comparisions/analysis-tools/vcf-to-narrow.py
-    Parses a VCF file to find snps
-
-~/Projects/analyze-snpmutator-snppipeline-results/analysis.py
-    Pandas code to compare and contrast data sets with inner and outer joins.
-
-~/Projects/analyze-snpmutator-snppipeline-results/venn.100x.20x.fn.py
-    Venn diagram example.
-
-~/Projects/multi-vcf/plot-snps.2a.py
-    Plot a histogram of SNPS along the length of 2 genomes assuming there are no overlapping snps.
+Tools for working with VCF files.
 """
 
 from __future__ import print_function
