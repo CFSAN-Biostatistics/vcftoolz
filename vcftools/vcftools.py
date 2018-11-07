@@ -15,9 +15,9 @@ import itertools
 import os
 import sys
 import vcf
-from vcftools.vcf_call_parser import call_alleles, call_generator
+from vcftools.vcf_call_parser import call_alleles, call_generator, is_filtered_call
 
-__version__ = '0.6.0'
+__version__ = '0.7.0'
 
 def report_error(message):
     """
@@ -167,7 +167,7 @@ class SampleSnps(object):
     data per snp position.
     """
 
-    def __init__(self, snp_list, alt_dict, format_dict, call_dict):
+    def __init__(self, snp_list, filtered_snp_list, alt_dict, format_dict, call_dict):
         """
         Initialize the Snps container.
 
@@ -175,6 +175,8 @@ class SampleSnps(object):
         ----------
         snp_list : list of SnpTuple namedtuple
             List of SnpTuple namedtuple containing (chrom, pos, ref, gt, sample)
+        filtered_snp_list : list of SnpTuple namedtuple
+            List of filtered SnpTuple namedtuple containing (chrom, pos, ref, gt, sample)
         alt_dict :  dict
             Dictionary mapping from keyed snp tuple to actual alt list
         format_dict : dict
@@ -183,12 +185,13 @@ class SampleSnps(object):
             Dictionary mapping from keyed snp tuple to namedtuple of genotype data elements
         """
         self.snp_list = snp_list
+        self.filtered_snp_list = filtered_snp_list
         self.alt_dict = alt_dict
         self.format_dict = format_dict
         self.call_dict = call_dict
 
 
-def get_snp_list(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
+def get_snp_list(truth_flag, vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
     """
     Get the list of snps in a VCF file.
 
@@ -196,6 +199,8 @@ def get_snp_list(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_r
 
     Parameters
     ----------
+    truth_flag : bool
+        When true, the first VCF file is considered truth and the filtered snps are gathered separately from non-filtered snps
     vcf_path : str
         Path to the VCF file
     exclude_snps : bool
@@ -218,15 +223,21 @@ def get_snp_list(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_r
     snps : SampleSnps
         Container of:
             snps : list of namedtuple SnpTuple containing (chrom, pos, ref, gt, sample)
+            filtered_snps : list of namedtuple SnpTuple containing (chrom, pos, ref, gt, sample)
             alt_dict :  dictionary mapping from keyed snp tuple to actual alt list
             format_dict : dictionary mapping from keyed snp tuple to FORMAT string
             call_dict : dictionary mapping from keyed snp tuple to namedtuple of genotype data elements
     """
     with open(vcf_path) as input:
         snps = []
+        filtered_snps = []
         alt_dict = dict()
         format_dict = dict()
         call_dict = dict()
+
+        if truth_flag:
+            exclude_filtered = False
+
         for record, call in call_generator(input, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
             if call.is_het:
                 bases = call.gt_bases or '.' # heterozygous
@@ -234,12 +245,16 @@ def get_snp_list(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_r
                 bases = call_alleles(call)[0] # homozygous
             if bases == "N":
                 continue
-            snp = SnpTuple(record.CHROM, int(record.POS), record.REF, bases, call.sample)
-            snps.append(snp)
+            snp = SnpTuple(record.CHROM, int(record.POS), record.REF.upper(), bases, call.sample)
+            filtered = is_filtered_call(record, call)
+            if not truth_flag or not filtered:
+                snps.append(snp)
+            if filtered:
+                filtered_snps.append(snp)
             alt_dict[snp] = record.ALT
             format_dict[snp] = record.FORMAT
             call_dict[snp] = call.data
-        return SampleSnps(snps, alt_dict, format_dict, call_dict)
+        return SampleSnps(snps, filtered_snps, alt_dict, format_dict, call_dict)
 
 def tabulate_results(snp_sets, samples, table_file_path):
     """
@@ -337,6 +352,7 @@ def parse_arguments(system_args):
     subparser.add_argument("--exclude_hetero",   action="store_true", dest="exclude_hetero",   help="Exclude heterozygous calls.")
     subparser.add_argument("--exclude_filtered", action="store_true", dest="exclude_filtered", help="Exclude filtered calls (FT or FILTER is not PASS).")
     subparser.add_argument("--exclude_missing",  action="store_true", dest="exclude_missing",  help="Exclude calls with all data elements missing.")
+    subparser.add_argument("--truth",            action="store_true", dest="truth_flag",       help="Additional metrics are generated assuming the first VCF file is the truth. This also triggers extra analysis of filtered calls.")
     subparser.add_argument("-t", "--tableFile",  type=str, metavar='FILE', dest="table_file",  help="Tablulate the results in the specified tab-separated-value file.")
     subparser.set_defaults(func=compare_wrapper)
 
@@ -372,9 +388,47 @@ def compare_wrapper(args):
     parse_arguments()
     """
     vcf_path_list = args.vcf_path1 + args.vcf_path_list
-    compare(vcf_path_list, args.exclude_snps, args.exclude_indels, args.exclude_vars, args.exclude_refs, args.exclude_hetero, args.exclude_filtered, args.exclude_missing, args.table_file)
+    if args.truth_flag and args.exclude_filtered:
+        print("The --exclude_filtered flag is ignored when --truth is set.  It will be handled automatically.  The --truth flag triggers extra analysis of filtered calls.", file=sys.stderr)
+    if args.truth_flag and len(vcf_path_list) != 2:
+        print("When the truth option is used, there must be exactly 2 VCF files.", file=sys.stderr)
+        exit(1)
+    compare(args.truth_flag, vcf_path_list, args.exclude_snps, args.exclude_indels, args.exclude_vars, args.exclude_refs, args.exclude_hetero, args.exclude_filtered, args.exclude_missing, args.table_file)
 
-def compare(vcf_path_list, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing, table_file):
+
+def print_snp_detail_list(snp_set, alt_dict, format_dict, call_dict):
+    """Print a list of snps.
+
+    Parameters
+    ---------
+    snp_set : list of SnpTuple namedtuple
+        Set of SnpTuple namedtuple containing (chrom, pos, ref, gt, sample)
+    alt_dict :  dict
+        Dictionary mapping from keyed snp tuple to actual alt list
+    format_dict : dict
+        Dictionary mapping from keyed snp tuple to FORMAT string
+    call_dict : dict
+        Dictionary mapping from keyed snp tuple to namedtuple of genotype data elements
+    """
+    sorted_snps = sorted(list(snp_set))
+
+    if len(sorted_snps) == 0:
+        print("None")
+    else:
+        print("CHROM   \tPOS\tREF\tALT\tSAMPLE  \tFORMAT\tDATA")
+        for snp in sorted_snps:
+            fields = [str(x) for x in snp]
+            fields[3] = ",".join(map(str, alt_dict[snp]))
+            format_str = format_dict[snp]
+            format_keys = format_str.split(":")
+            call_data = call_dict[snp]
+            call_data_str = ":".join([str(getattr(call_data, k, None)) for k in format_keys])
+            fields.append(format_str)
+            fields.append(call_data_str)
+            print('\t'.join(fields))
+
+
+def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing, table_file):
     """
     Compare and analyze the snps found in two or more input VCF files.
 
@@ -382,6 +436,8 @@ def compare(vcf_path_list, exclude_snps, exclude_indels, exclude_vars, exclude_r
 
     Parameters
     ----------
+    truth_flag : bool
+        When true, the first VCF file is considered truth.
     vcf_path_list : list of str
         List of paths to the VCF files
     exclude_snps : bool
@@ -431,8 +487,9 @@ def compare(vcf_path_list, exclude_snps, exclude_indels, exclude_vars, exclude_r
 
     # Extract the snps from each vcf file
     packed_exclude_flags = (exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing)
-    sample_snps_list = [get_snp_list(path, *packed_exclude_flags) for path in vcf_path_list] # List of SampleSnps
+    sample_snps_list = [get_snp_list(truth_flag, path, *packed_exclude_flags) for path in vcf_path_list] # List of SampleSnps
     snp_set_list = [set(sample_snps.snp_list) for sample_snps in sample_snps_list] # list of set of SnpTuple namedtuples having (chrom, pos, ref, gt, sample)
+    filtered_snp_set_list = [set(sample_snps.filtered_snp_list) for sample_snps in sample_snps_list] # list of set of SnpTuple namedtuples having (chrom, pos, ref, gt, sample)
     alt_dict_list = [sample_snps.alt_dict for sample_snps in sample_snps_list]
     format_dict_list = [sample_snps.format_dict for sample_snps in sample_snps_list]
     call_dict_list = [sample_snps.call_dict for sample_snps in sample_snps_list]
@@ -452,10 +509,13 @@ def compare(vcf_path_list, exclude_snps, exclude_indels, exclude_vars, exclude_r
     print()
 
     position_set_list = []
+    filtered_position_set_list = []
     for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
         positions = set([(s.chrom, s.pos) for s in snp_set_list[i]])
+        filtered_positions = set([(s.chrom, s.pos) for s in filtered_snp_set_list[i]])
         position_set_list.append(positions)
+        filtered_position_set_list.append(filtered_positions)
         count = len(positions)
         print("{count}\tPositions having snps in {dataset}".format(dataset=dataset, count=count))
     print()
@@ -464,7 +524,13 @@ def compare(vcf_path_list, exclude_snps, exclude_indels, exclude_vars, exclude_r
     for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
         count = len(unique_positions_sets[i])
-        print("{count}\tSNP Positions only in {dataset}".format(dataset=dataset, count=count))
+        if not truth_flag:
+            unique_snps_description = "SNP positions only in {dataset}"
+        elif i == 0:
+            unique_snps_description = "False negative snp positions"
+        else:
+            unique_snps_description = "False positive snp positions"
+        print(("{count}\t" + unique_snps_description).format(dataset=dataset, count=count))
     print()
 
     if num_vcf_files >= 3:
@@ -481,10 +547,29 @@ def compare(vcf_path_list, exclude_snps, exclude_indels, exclude_vars, exclude_r
         print("{count}\tSample snps in {dataset}".format(dataset=dataset, count=count))
     print()
 
+    if truth_flag:
+        true_positive_snps = snp_set_list[0] & snp_set_list[1]
+        true_positive_snps_count = len(true_positive_snps)
+        print("{count}\tTrue positive sample snps".format(count=true_positive_snps_count))
     for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
         count = len(unique_snps_sets[i])
-        print("{count}\tSample snps only in {dataset}".format(dataset=dataset, count=count))
+        if not truth_flag:
+            unique_snps_description = "Sample snps only in {dataset}"
+        elif i == 0:
+            unique_snps_description = "False negative sample snps"
+            false_negative_snps_count = count
+        else:
+            unique_snps_description = "False positive sample snps"
+            false_positive_snps_count = count
+        print(("{count}\t" + unique_snps_description).format(dataset=dataset, count=count))
+    if truth_flag:
+        precision = float(true_positive_snps_count) / (true_positive_snps_count + false_positive_snps_count)
+        recall = float(true_positive_snps_count) / (true_positive_snps_count + false_negative_snps_count)
+        f1 = 2.0 * (precision * recall) / (precision + recall)
+        print("%0.4f\tPrecision" % precision)
+        print("%0.4f\tRecall" % recall)
+        print("%0.4f\tF1 score" % f1)
     print()
 
     if num_vcf_files >= 3:
@@ -492,6 +577,30 @@ def compare(vcf_path_list, exclude_snps, exclude_indels, exclude_vars, exclude_r
             dataset = base_vcf_file_name_list[i]
             count = len(missing_snps_sets[i])
             print("{count}\tSample snps missing in {dataset}, but present in at least 2 other VCF files".format(dataset=dataset, count=count))
+        print()
+
+    # Print the effectiveness of the snp filters
+    if truth_flag:
+        truth_positions = position_set_list[0]
+        filtered_positions = filtered_position_set_list[1]
+        incorrectly_filtered_positions = truth_positions & filtered_positions
+        correctly_filtered_positions = filtered_positions - truth_positions
+
+        # Need to do something special here and omit the gt element when examining filtered snps
+        # because the gt element is usually "." which will never match the truth gt element. So
+        # instead, we just look at chrom, pos, and sample.
+        truth_snps = set([(s.chrom, s.pos, s.sample) for s in snp_set_list[0]])
+        filtered_snps = set([(s.chrom, s.pos, s.sample) for s in filtered_snp_set_list[1]])
+        incorrectly_filtered_snps = truth_snps & filtered_snps
+        correctly_filtered_snps = filtered_snps - truth_snps
+
+        print("{count}\tTotal filtered snp positions".format(count=len(filtered_positions)))
+        print("{count}\tFalse negative snp positions incorrectly removed by filters".format(count=len(incorrectly_filtered_positions)))
+        print("{count}\tTrue negative snp positions correctly removed by filters".format(count=len(correctly_filtered_positions)))
+        print()
+        print("{count}\tTotal filtered sample snps".format(count=len(filtered_snps)))
+        print("{count}\tFalse negative sample snps incorrectly removed by filters".format(count=len(incorrectly_filtered_snps)))
+        print("{count}\tTrue negative sample snps correctly removed by filters".format(count=len(correctly_filtered_snps)))
         print()
 
     # Print the positions present in only one of the VCF files
@@ -520,22 +629,7 @@ def compare(vcf_path_list, exclude_snps, exclude_indels, exclude_vars, exclude_r
     # Print the snps present in only one of the VCF files
     for i in range(num_vcf_files):
         print("\nSample snps only in %s" % base_vcf_file_name_list[i])
-        sorted_snps = sorted(list(unique_snps_sets[i]))
-        if len(sorted_snps) == 0:
-            print("None")
-        else:
-            print("CHROM   \tPOS\tREF\tALT\tSAMPLE  \tFORMAT\tDATA")
-            for snp in sorted_snps:
-                fields = [str(x) for x in snp]
-                fields[3] = ",".join(map(str, alt_dict_list[i][snp]))
-                format_str = format_dict_list[i][snp]
-                format_keys = format_str.split(":")
-                call_data = call_dict_list[i][snp]
-                call_data_str = ":".join([str(getattr(call_data, k, None)) for k in format_keys])
-                fields.append(format_str)
-                fields.append(call_data_str)
-                print('\t'.join(fields))
-
+        print_snp_detail_list(unique_snps_sets[i], alt_dict_list[i], format_dict_list[i], call_dict_list[i])
 
     # Print the snps missing in each of the VCF files
     if num_vcf_files >= 3:
@@ -549,6 +643,20 @@ def compare(vcf_path_list, exclude_snps, exclude_indels, exclude_vars, exclude_r
                 for snp in sorted_snps:
                     fields = [str(x) for x in snp]
                     print('\t'.join(fields))
+
+    # Print the false negative filtered snps
+    if truth_flag:
+        # Get the full SnpTuple for all known incorrectly filtered snps
+        incorrectly_filtered_snps = set([s for s in filtered_snp_set_list[1] if (s.chrom, s.pos, s.sample) in incorrectly_filtered_snps])
+        print("\nFalse negative sample snps incorrectly removed by filters")
+        print_snp_detail_list(incorrectly_filtered_snps, alt_dict_list[1], format_dict_list[1], call_dict_list[1])
+
+    # Print the true negative filtered snps
+    if truth_flag:
+        # Get the full SnpTuple for all known correctly filtered snps
+        correctly_filtered_snps = set([s for s in filtered_snp_set_list[1] if (s.chrom, s.pos, s.sample) in correctly_filtered_snps])
+        print("\nTrue negative sample snps correctly removed by filters")
+        print_snp_detail_list(correctly_filtered_snps, alt_dict_list[1], format_dict_list[1], call_dict_list[1])
 
     # Tabulate all the venn diagram sections into a TSV spreadsheet
     # Emit one row per position and one column per sample.

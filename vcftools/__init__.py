@@ -2,4 +2,4 @@
 
 __author__ = 'Steve Davis'
 __email__ = 'steven.davis@fda.hhs.gov'
-__version__ = '0.6.0'
+__version__ = '0.7.0'
