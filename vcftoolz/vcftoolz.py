@@ -1,29 +1,19 @@
-#!/usr/bin/env python
-
 # -*- coding: utf-8 -*-
 
-"""
-Tools for working with VCF files.
+"""This module is part of VCF Toolz.
 """
 
 from __future__ import print_function
+from __future__ import absolute_import
 
-import argparse
 import csv
 import collections
 import itertools
+import logging
 import os
 import sys
 import vcf
-from vcftools.vcf_call_parser import call_alleles, call_generator, is_filtered_call
-
-__version__ = '0.7.0'
-
-def report_error(message):
-    """
-    Send an error message to stderr.
-    """
-    print(message, file=sys.stderr)
+from vcftoolz.vcf_call_parser import call_alleles, call_generator, is_filtered_call
 
 
 def get_unique_set_elements(sets):
@@ -128,12 +118,12 @@ def verify_non_empty_input_files(error_prefix, file_list):
         if not os.path.isfile(file_path):
             bad_count += 1
             err_message = "%s %s does not exist." % (error_prefix, file_path)
-            report_error(err_message)
+            logging.error(err_message)
             continue
         if os.path.getsize(file_path) == 0:
             bad_count += 1
             err_message = "%s %s is empty." % (error_prefix, file_path)
-            report_error(err_message)
+            logging.error(err_message)
             continue
 
     return bad_count
@@ -319,83 +309,6 @@ def tabulate_results(snp_sets, samples, table_file_path):
                 f.write("%s\n" % '\t'.join(spreadsheet_row))
 
 
-def parse_arguments(system_args):
-    """
-    Parse command line arguments.
-
-    Parameters
-    ----------
-    system_args : list
-        List of command line arguments, usually sys.argv[1:].
-
-    Returns
-    -------
-    Namespace
-        Command line arguments are stored as attributes of a Namespace.
-    """
-    description = """VCF Tools."""
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('--version',          action='version', version='%(prog)s version ' + __version__)
-    subparsers = parser.add_subparsers(dest="subparser_name", help=None, metavar="subcommand       ")
-    subparsers.required = True
-
-    formatter_class = argparse.ArgumentDefaultsHelpFormatter
-
-    description = "Compare and analyze the variants found in multiple input VCF files."
-    subparser = subparsers.add_parser("compare", formatter_class=formatter_class, description=description, help="Compare VCF files.")
-    subparser.add_argument(dest="vcf_path1",     type=str, metavar="VcfFile", nargs=1,  help="VCF file")
-    subparser.add_argument(dest="vcf_path_list", type=str, metavar="VcfFile", nargs='+',  help="VCF file")
-    subparser.add_argument("--exclude_snps",     action="store_true", dest="exclude_snps",     help="Exclude snp calls. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
-    subparser.add_argument("--exclude_indels",   action="store_true", dest="exclude_indels",   help="Exclude insertions and deletions. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
-    subparser.add_argument("--exclude_vars",     action="store_true", dest="exclude_vars",     help="Exclude variants other than snps and indels.")
-    subparser.add_argument("--exclude_refs",     action="store_true", dest="exclude_refs",     help="Exclude reference calls.")
-    subparser.add_argument("--exclude_hetero",   action="store_true", dest="exclude_hetero",   help="Exclude heterozygous calls.")
-    subparser.add_argument("--exclude_filtered", action="store_true", dest="exclude_filtered", help="Exclude filtered calls (FT or FILTER is not PASS).")
-    subparser.add_argument("--exclude_missing",  action="store_true", dest="exclude_missing",  help="Exclude calls with all data elements missing.")
-    subparser.add_argument("--truth",            action="store_true", dest="truth_flag",       help="Additional metrics are generated assuming the first VCF file is the truth. This also triggers extra analysis of filtered calls.")
-    subparser.add_argument("-t", "--tableFile",  type=str, metavar='FILE', dest="table_file",  help="Tablulate the results in the specified tab-separated-value file.")
-    subparser.set_defaults(func=compare_wrapper)
-
-    description = "Convert a VCF file into a tab delimited set of variant calls, one per line."
-    subparser = subparsers.add_parser("narrow", formatter_class=formatter_class, description=description, help=description)
-    subparser.add_argument(dest="vcf_path", type=str, metavar="VcfFile", help="VCF file")
-    subparser.add_argument("--exclude_snps",     action="store_true", dest="exclude_snps",     help="Exclude snp calls. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
-    subparser.add_argument("--exclude_indels",   action="store_true", dest="exclude_indels",   help="Exclude insertions and deletions. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
-    subparser.add_argument("--exclude_vars",     action="store_true", dest="exclude_vars",     help="Exclude variants other than snps and indels.")
-    subparser.add_argument("--exclude_refs",     action="store_true", dest="exclude_refs",     help="Exclude reference calls.")
-    subparser.add_argument("--exclude_hetero",   action="store_true", dest="exclude_hetero",   help="Exclude heterozygous calls.")
-    subparser.add_argument("--exclude_filtered", action="store_true", dest="exclude_filtered", help="Exclude filtered calls (FT or FILTER is not PASS).")
-    subparser.add_argument("--exclude_missing",  action="store_true", dest="exclude_missing",  help="Exclude calls with all data elements missing.")
-    subparser.set_defaults(func=narrow_wrapper)
-
-    args = parser.parse_args(system_args)
-    return args
-
-
-def compare_wrapper(args):
-    """
-    Compare and analyze the snps found in two or more input VCF files.
-
-    Parameters
-    ----------
-    args : Namespace
-        Command line arguments stored as attributes of a Namespace, usually
-        parsed from sys.argv, but can be set programmatically for unit testing
-        or other purposes.
-
-    See Also
-    --------
-    parse_arguments()
-    """
-    vcf_path_list = args.vcf_path1 + args.vcf_path_list
-    if args.truth_flag and args.exclude_filtered:
-        print("The --exclude_filtered flag is ignored when --truth is set.  It will be handled automatically.  The --truth flag triggers extra analysis of filtered calls.", file=sys.stderr)
-    if args.truth_flag and len(vcf_path_list) != 2:
-        print("When the truth option is used, there must be exactly 2 VCF files.", file=sys.stderr)
-        exit(1)
-    compare(args.truth_flag, vcf_path_list, args.exclude_snps, args.exclude_indels, args.exclude_vars, args.exclude_refs, args.exclude_hetero, args.exclude_filtered, args.exclude_missing, args.table_file)
-
-
 def print_snp_detail_list(snp_set, alt_dict, format_dict, call_dict):
     """Print a list of snps.
 
@@ -456,10 +369,6 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
         Exclude calls with all data elements missing.
     table_file_path : str
         Path to the TSV file to be written.
-
-    See Also
-    --------
-    parse_arguments()
     """
     # Validate input files
     bad_files_count = verify_non_empty_input_files("VCF file", vcf_path_list)
@@ -671,13 +580,13 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
             matplotlib.use("Agg")
             from matplotlib import pyplot as plt
         except:
-            report_error("Skipping venn diagram creation.  Requires matplotlib.")
+            logging.info("Skipping venn diagram creation.  Requires matplotlib.")
             exit(1)
     if num_vcf_files == 2 or num_vcf_files == 3:
         try:
             from matplotlib_venn import venn2, venn3, venn3_unweighted, venn2_circles, venn3_circles
         except:
-            report_error("Skipping venn diagram creation.  Requires matplotlib_venn.")
+            logging.info("Skipping venn diagram creation.  Requires matplotlib_venn.")
             exit(1)
 
         def colorize_venn2(venn_circles):
@@ -748,26 +657,9 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
         plt.savefig("venn%i.pdf" % num_vcf_files)
         plt.close()
 
-def narrow_wrapper(args):
-    """
-    Convert a VCF file into a tab delimited set of snp calls, one per line.
-
-    Parameters
-    ----------
-    args : Namespace
-        Command line arguments stored as attributes of a Namespace, usually
-        parsed from sys.argv, but can be set programmatically for unit testing
-        or other purposes.
-
-    See Also
-    --------
-    parse_arguments()
-    """
-    narrow(args.vcf_path, args.exclude_snps, args.exclude_indels, args.exclude_vars, args.exclude_refs, args.exclude_hetero, args.exclude_filtered, args.exclude_missing)
 
 def narrow(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
-    """
-    Convert a VCF file into a tab delimited set of snp calls, one per line.
+    """Convert a VCF file into a tab delimited set of snp calls, one per line.
 
     By default, all calls are included in the output.
 
@@ -791,7 +683,9 @@ def narrow(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, e
         Exclude calls with all data elements missing.
     """
     if len(vcf_path) > 0:
-        verify_non_empty_input_files("VCF file", [vcf_path])
+        bad_files_count = verify_non_empty_input_files("VCF file", [vcf_path])
+        if bad_files_count > 0:
+            exit(1)
         input = open(vcf_path)
     else:
         input = sys.stdin
@@ -816,12 +710,3 @@ def narrow(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, e
     out.writerow(header)
     for row in snps:
         out.writerow(row)
-
-
-
-def main():
-    args = parse_arguments(sys.argv[1:])
-    args.func(args)
-
-if __name__ == "__main__":
-    main()

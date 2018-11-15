@@ -1,9 +1,9 @@
 .. :changelog:
 
 History
--------
+=======
 
-0.1.0 (2016-02-08)
+1.0.0 (2018-12-31)
 ---------------------
 
-* First version.
+* Initial version.

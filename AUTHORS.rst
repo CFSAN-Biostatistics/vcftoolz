@@ -2,6 +2,11 @@
 Credits
 =======
 
+Development Lead
+----------------
+
+* Steve Davis
+
 CFSAN Bioinformatics Team
 -------------------------
 

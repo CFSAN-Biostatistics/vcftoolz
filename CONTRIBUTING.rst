@@ -15,7 +15,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/CFSAN-Biostatistics/vcftools/issues.
+Report bugs at https://github.com/CFSAN-Biostatistics/vcftoolz/issues.
 
 If you are reporting a bug, please include:
 
@@ -38,14 +38,14 @@ is open to whoever wants to implement it.
 Write Documentation
 ~~~~~~~~~~~~~~~~~~~
 
-vcftools could always use more documentation, whether as part of the
-official vcftools docs, in docstrings, or even on the web in blog posts,
+VCF Toolz could always use more documentation, whether as part of the
+official VCF Toolz docs, in docstrings, or even on the web in blog posts,
 articles, and such.
 
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at https://github.com/CFSAN-Biostatistics/vcftools/issues.
+The best way to send feedback is to file an issue at https://github.com/CFSAN-Biostatistics/vcftoolz/issues.
 
 If you are proposing a feature:
 
@@ -57,20 +57,20 @@ If you are proposing a feature:
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up `vcftools` for local development.
+Ready to contribute? Here's how to set up `vcftoolz` for local development.
 
-1. Fork the `vcftools` repo on GitHub.
+1. Fork the `vcftoolz` repo on GitHub.
 2. Clone your fork locally::
 
-    $ git clone git@github.com:your_name_here/vcftools.git
+    $ git clone git@github.com:your_name_here/vcftoolz.git
 
 3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development::
 
-    $ mkvirtualenv vcftools
-    $ cd vcftools/
-    $ python setup.py develop
-    $ pip install sphinx
+    $ mkvirtualenv vcftoolz
+    $ cd vcftoolz/
     $ pip install sphinx_rtd_theme    # the documentation uses the ReadTheDocs theme
+    $ pip install pytest
+    $ python setup.py develop
 
 4. Create a branch for local development::
 
@@ -80,15 +80,17 @@ Ready to contribute? Here's how to set up `vcftools` for local development.
 
 5. When you're done making changes, check that your changes pass flake8 and the tests, including testing other Python versions with tox::
 
-    $ flake8 vcftools tests
-    $ python setup.py test
+    $ flake8 vcftoolz tests
+    $ pytest -v
     $ tox
 
    To get flake8 and tox, just pip install them into your virtualenv.
 
-6. Update the documentation and review the changes locally with sphinx:
+6. Update the documentation and review the changes locally with sphinx::
 
-    $ make docs
+    $ cd docs
+    $ sphinx-build -b html . ./_build
+    $ xdg-open _build/index.html
 
 7. Commit your changes and push your branch to GitHub::
 
@@ -107,13 +109,11 @@ Before you submit a pull request, check that it meets these guidelines:
 2. If the pull request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
    feature to the list in README.rst.
-3. The pull request should work for Python 2.6, 2.7, 3.3, and 3.4, and for PyPy. Check
-   https://travis-ci.org/CFSAN-Biostatistics/vcftools/pull_requests
-   and make sure that the tests pass for all supported Python versions.
+3. The pull request should work for Python 2.7, 3.4, 3.5, 3.6, and for PyPy.
 
 Tips
 ----
 
 To run a subset of tests::
 
-    $ python -m unittest tests.test_vcftools
+    $ pytest -v tests/test_vcftoolz.py

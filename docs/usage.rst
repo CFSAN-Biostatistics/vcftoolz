@@ -2,9 +2,9 @@
 Usage
 ========
 
-To use vcftools::
+To use VCF Toolz::
 
-    vcftools.py -a file1.vcf file2.vcf ...
+    vcftoolz -a file1.vcf file2.vcf ...
 
 Output is written to stdout.
 

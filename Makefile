@@ -35,7 +35,7 @@ clean-test:
 	rm -fr htmlcov/
 
 lint:
-	flake8 vcftools tests
+	flake8 vcftoolz tests
 
 test:
 	python setup.py test
@@ -44,15 +44,15 @@ test-all:
 	tox
 
 coverage:
-	coverage run --source vcftools setup.py test
+	coverage run --source vcftoolz setup.py test
 	coverage report -m
 	coverage html
 	open htmlcov/index.html
 
 docs:
-	rm -f docs/vcftools.rst
+	rm -f docs/vcftoolz.rst
 	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ vcftools
+	sphinx-apidoc -o docs/ vcftoolz
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	xdg-open docs/_build/html/index.html

@@ -21,46 +21,41 @@ requirements = [
 ]
 
 test_requirements = [
-    # TODO: put package test requirements here
+    "pytest",
 ]
 
 setup(
-    name='vcftools',
-    version='0.7.0',
-    description="Compares the snps in two or more VCF files.",
+    name='vcftoolz',
+    version='1.0.0',
+    description="Tools for working with Variant Call Format files.",
     long_description=readme + '\n\n' + history,
     author="Steve Davis",
     author_email='steven.davis@fda.hhs.gov',
-    url='https://github.com/CFSAN-Biostatistics/vcftools',
+    url='https://github.com/CFSAN-Biostatistics/vcftoolz',
     packages=[
-        'vcftools',
+        'vcftoolz',
     ],
-    package_dir={'vcftools':
-                 'vcftools'},
+    package_dir={'vcftoolz':
+                 'vcftoolz'},
     include_package_data=True,
     install_requires=requirements,
     license="BSD",
     zip_safe=False,
-    keywords=['bioinformatics', 'NGS', 'vcftools'],
+    keywords=['bioinformatics', 'NGS', 'vcftoolz'],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
         "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ],
-    entry_points={'console_scripts': ['vcftools = vcftools.vcftools:main']},
-    scripts=[
-        'scripts/comparevcf.sh',
-        'scripts/listvcf.sh',
-        'scripts/preprocess.sh',
-    ],
-    test_suite='tests',
+    entry_points={'console_scripts': ['vcftoolz = vcftoolz.cli:main']},
+    setup_requires=["pytest-runner"],
     tests_require=test_requirements
 )
