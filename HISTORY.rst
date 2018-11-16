@@ -3,7 +3,7 @@
 History
 =======
 
-1.0.0 (2018-12-31)
+1.0.0 (2018-11-16)
 ---------------------
 
-* Initial version.
+* First public release.

@@ -37,7 +37,10 @@ def parse_arguments(system_args):
     formatter_class = argparse.ArgumentDefaultsHelpFormatter
 
     help_str = "Compare VCF files."
-    description = "Compare and analyze the variants found in multiple input VCF files. A report of differences is printed to stdout."
+    description = """Compare and analyze the variants found in multiple input VCF files. A summary report of differences is printed to
+      stdout.  Venn diagrams in pdf format are generated in the current working directory for up to 6 VCF files. A spreadsheet of
+      tabulated results can be optionally generated.  When the truth is known, the summary file contains additional metrics describing
+      the effectiveness of the variant caller as well as the effectiveness of the filters."""
     subparser = subparsers.add_parser("compare", formatter_class=formatter_class, description=description, help=help_str)
     subparser.add_argument(nargs=1,              dest="vcf_path1",        type=str, metavar="VCF",  help="VCF file")
     subparser.add_argument(nargs='+',            dest="vcf_path_list",    type=str, metavar="VCF",  help="VCF file")
@@ -52,8 +55,9 @@ def parse_arguments(system_args):
     subparser.add_argument("--tableFile",        dest="table_file",       type=str, metavar='FILE', help="Tabulate the results in the specified tab-separated-value file.")
     subparser.set_defaults(func=compare_command)
 
-    description = "Convert a VCF file into a tab delimited set of variant calls, one per line."
-    subparser = subparsers.add_parser("narrow", formatter_class=formatter_class, description=description, help=description)
+    help_str = "Reformat VCF data into a tall, narrow format."
+    description = "Convert a VCF file into a tall and narrow format.  Output is printed to stdout."
+    subparser = subparsers.add_parser("narrow", formatter_class=formatter_class, description=description, help=help_str)
     subparser.add_argument(                      dest="vcf_path",         type=str, metavar="VCF",  help="VCF file")
     subparser.add_argument("--exclude_snps",     dest="exclude_snps",     action="store_true",      help="Exclude snp calls. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
     subparser.add_argument("--exclude_indels",   dest="exclude_indels",   action="store_true",      help="Exclude insertions and deletions. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
