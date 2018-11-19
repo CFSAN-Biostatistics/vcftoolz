@@ -640,7 +640,6 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
                     colorize_venn2(c)
                     plt_idx += 1
                 axes[0].set_title(title)
-            plt.show()
             plt.savefig(output_file)
             plt.close()
 
@@ -669,7 +668,6 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
         axes[plt_idx].set_title("SNPs", fontsize=titlesize)
 
         plt.subplots_adjust(hspace=0.5)  # adjust height spacing between subplots
-        plt.show()
         plt.savefig("venn%i.pdf" % num_vcf_files)
         plt.close()
 
