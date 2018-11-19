@@ -590,6 +590,8 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
             exit(1)
 
         def colorize_venn2(venn_circles):
+            """Set the colors of the 3 sections of a 2-set Venn diagram.
+            """
             colors2 = [
                 # r, g, b
                 [157, 217, 161],
@@ -598,12 +600,11 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
             ]
             colors2 = [[i[0] / 255.0, i[1] / 255.0, i[2] / 255.0] for i in colors2]
 
-            venn_circles.get_patch_by_id('10').set_color(colors2[0])
-            venn_circles.get_patch_by_id('01').set_color(colors2[1])
-            venn_circles.get_patch_by_id('11').set_color(colors2[2])
-            venn_circles.get_patch_by_id('10').set_alpha(1.0)
-            venn_circles.get_patch_by_id('01').set_alpha(1.0)
-            venn_circles.get_patch_by_id('11').set_alpha(1.0)
+            for idx, patch_id in enumerate(["10", "01", "11"]):
+                patch = venn_circles.get_patch_by_id(patch_id)
+                if patch:
+                    patch.set_color(colors2[idx])
+                    patch.set_alpha(1.0)
 
         def make_venn2(set_list, title, output_file):
             """
