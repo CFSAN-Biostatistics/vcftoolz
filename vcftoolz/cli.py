@@ -15,6 +15,7 @@ from vcftoolz.__init__ import __version__
 # Ignore flake8 errors in this module
 # fl ake8: noqa
 
+
 def parse_arguments(system_args):
     """Parse command line arguments.
 
@@ -58,7 +59,7 @@ def parse_arguments(system_args):
     help_str = "Reformat VCF data into a tall, narrow format."
     description = "Convert a VCF file into a tall and narrow format.  Output is printed to stdout."
     subparser = subparsers.add_parser("narrow", formatter_class=formatter_class, description=description, help=help_str)
-    subparser.add_argument(                      dest="vcf_path",         type=str, metavar="VCF",  help="VCF file")
+    subparser.add_argument(                      dest="vcf_path",         type=str, metavar="VCF",  help="VCF file")  # noqa: E201
     subparser.add_argument("--exclude_snps",     dest="exclude_snps",     action="store_true",      help="Exclude snp calls. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
     subparser.add_argument("--exclude_indels",   dest="exclude_indels",   action="store_true",      help="Exclude insertions and deletions. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
     subparser.add_argument("--exclude_vars",     dest="exclude_vars",     action="store_true",      help="Exclude variants other than snps and indels.")

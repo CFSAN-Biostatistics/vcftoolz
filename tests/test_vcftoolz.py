@@ -24,19 +24,19 @@ def test_get_unique_set_elements():
     unique_sets = vcftoolz.get_unique_set_elements([set(), set(), set()])
     assert(unique_sets == [set(), set(), set()])
 
-    unique_sets = vcftoolz.get_unique_set_elements([{100,101,1,2}, {100,101,3,4}, {100,101,5,6}])
-    assert(unique_sets == [{1,2}, {3,4}, {5,6}])
+    unique_sets = vcftoolz.get_unique_set_elements([{100, 101, 1, 2}, {100, 101, 3, 4}, {100, 101, 5, 6}])
+    assert(unique_sets == [{1, 2}, {3, 4}, {5, 6}])
 
-    unique_sets = vcftoolz.get_unique_set_elements([{100,101}, {100,101}, {100,101}])
+    unique_sets = vcftoolz.get_unique_set_elements([{100, 101}, {100, 101}, {100, 101}])
     assert(unique_sets == [set(), set(), set()])
 
     unique_sets = vcftoolz.get_unique_set_elements([{"1"}])
     assert(unique_sets == [{"1"}])
 
-    unique_sets = vcftoolz.get_unique_set_elements([{"10","11"}, {"01","11"}])
+    unique_sets = vcftoolz.get_unique_set_elements([{"10", "11"}, {"01", "11"}])
     assert(unique_sets == [{"10"}, {"01"}])
 
-    unique_sets = vcftoolz.get_unique_set_elements([{"100","110","101","111"}, {"110","010","111","011"}, {"101","111","011","001"}])
+    unique_sets = vcftoolz.get_unique_set_elements([{"100", "110", "101", "111"}, {"110", "010", "111", "011"}, {"101", "111", "011", "001"}])
     assert(unique_sets == [{"100"}, {"010"}, {"001"}])
 
 
@@ -53,14 +53,14 @@ def test_get_missing_set_elements():
     missing_sets = vcftoolz.get_missing_set_elements([set(), set(), set()])
     assert(missing_sets == [set(), set(), set()])
 
-    missing_sets = vcftoolz.get_missing_set_elements([{100,101}, {100,101}, {100,101}])
+    missing_sets = vcftoolz.get_missing_set_elements([{100, 101}, {100, 101}, {100, 101}])
     assert(missing_sets == [set(), set(), set()])
 
     missing_sets = vcftoolz.get_missing_set_elements([{"1"}])
     assert(missing_sets == [set()])
 
-    missing_sets = vcftoolz.get_missing_set_elements([{"10","11"}, {"01","11"}])
+    missing_sets = vcftoolz.get_missing_set_elements([{"10", "11"}, {"01", "11"}])
     assert(missing_sets == [set(), set()])
 
-    missing_sets = vcftoolz.get_missing_set_elements([{"100","110","101","111"}, {"110","010","111","011"}, {"101","111","011","001"}])
+    missing_sets = vcftoolz.get_missing_set_elements([{"100", "110", "101", "111"}, {"110", "010", "111", "011"}, {"101", "111", "011", "001"}])
     assert(missing_sets == [{"011"}, {"101"}, {"110"}])

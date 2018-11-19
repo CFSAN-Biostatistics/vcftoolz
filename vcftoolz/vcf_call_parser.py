@@ -13,6 +13,7 @@ from __future__ import print_function
 import sys
 import vcf
 
+
 def _make_test_vcf_file(test_record):
     """This is a helper function used to help test various types of calls with the doctest module.
 
@@ -50,6 +51,7 @@ def _make_test_vcf_file(test_record):
     in_memory_file.seek(0)
     return in_memory_file
 
+
 def _make_test_pyvcf_calls(test_record):
     """This is a helper function used to help test various types of calls with the doctest module.
 
@@ -73,6 +75,7 @@ def _make_test_pyvcf_calls(test_record):
             calls.append((record, call))
     return calls
 
+
 def call_alleles(call):
     """Return a list of the bases in each allele of the specified call.
 
@@ -92,6 +95,7 @@ def call_alleles(call):
 
     alleles = call.gt_bases.split(call.gt_phase_char())
     return alleles
+
 
 def is_snp_call(record, call):
     """Return True if a sample call is a snp.
@@ -287,7 +291,7 @@ def is_other_variant_call(record, call):
         return False
     if is_indel_call(record, call):
         return False
-    if call.is_variant: # at least one GT allele is different from the REF
+    if call.is_variant:  # at least one GT allele is different from the REF
         # is_variant can be:
         # None  : gt == .
         # True  : gt > 0
@@ -343,7 +347,7 @@ def is_ref_call(record, call):
     >>> is_ref_call(*_make_test_pyvcf_calls("chrom 1 . A T . PASS . GT:FT .:.")[0])
     False
     """
-    return call.gt_type == 0 # homozygous ref
+    return call.gt_type == 0  # homozygous ref
 
 
 def is_filtered_call(record, call):
@@ -389,7 +393,7 @@ def is_filtered_call(record, call):
     except AttributeError:
         filt = record.FILTER    # Otherwise, use the filter for the whole record
 
-    if not filt or filt == "PASS" : # filter is not set or set to PASS
+    if not filt or filt == "PASS":  # filter is not set or set to PASS
         return False
     else:
         return True
@@ -458,6 +462,7 @@ def _test_call_generator(test_record, exclude_snps=None, exclude_indels=None, ex
     gen = call_generator(in_memory_file, exclude_snps=exclude_snps, exclude_indels=exclude_indels, exclude_vars=exclude_vars, exclude_refs=exclude_refs, exclude_hetero=exclude_hetero, exclude_filtered=exclude_filtered, exclude_missing=exclude_missing)
     for record, sample in gen:
         print(record, sample)
+
 
 def call_generator(input, exclude_snps=False, exclude_indels=False, exclude_vars=False, exclude_refs=False, exclude_hetero=False, exclude_filtered=False, exclude_missing=False):
     """Parse a VCF file and return calls with the containing record for samples matching the specified criteria.

@@ -245,9 +245,9 @@ def get_snp_list(truth_flag, vcf_path, exclude_snps, exclude_indels, exclude_var
 
         for record, call in call_generator(input, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
             if call.is_het:
-                bases = call.gt_bases or '.' # heterozygous
+                bases = call.gt_bases or '.'  # heterozygous
             else:
-                bases = call_alleles(call)[0] # homozygous
+                bases = call_alleles(call)[0]  # homozygous
             if bases == "N":
                 continue
             snp = SnpTuple(record.CHROM, int(record.POS), record.REF.upper(), bases, call.sample)
@@ -260,6 +260,7 @@ def get_snp_list(truth_flag, vcf_path, exclude_snps, exclude_indels, exclude_var
             format_dict[snp] = record.FORMAT
             call_dict[snp] = call.data
         return SampleSnps(snps, filtered_snps, alt_dict, format_dict, call_dict)
+
 
 def tabulate_results(snp_sets, samples, table_file_path):
     """
@@ -306,7 +307,7 @@ def tabulate_results(snp_sets, samples, table_file_path):
         for _, positions in pos_intersections:
             if len(positions) == 0:
                 continue
-            positions = sorted(positions) # set becomes sorted list
+            positions = sorted(positions)  # set becomes sorted list
             for chrom, pos, ref in positions:
                 # Prepare and write spreadsheet rows, one row per position and one column per sample
                 pos_str = str(pos)
@@ -411,9 +412,9 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
 
     # Extract the snps from each vcf file
     packed_exclude_flags = (exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing)
-    sample_snps_list = [get_snp_list(truth_flag, path, *packed_exclude_flags) for path in vcf_path_list] # List of SampleSnps
-    snp_set_list = [set(sample_snps.snp_list) for sample_snps in sample_snps_list] # list of set of SnpTuple namedtuples having (chrom, pos, ref, gt, sample)
-    filtered_snp_set_list = [set(sample_snps.filtered_snp_list) for sample_snps in sample_snps_list] # list of set of SnpTuple namedtuples having (chrom, pos, ref, gt, sample)
+    sample_snps_list = [get_snp_list(truth_flag, path, *packed_exclude_flags) for path in vcf_path_list]  # List of SampleSnps
+    snp_set_list = [set(sample_snps.snp_list) for sample_snps in sample_snps_list]  # list of set of SnpTuple namedtuples having (chrom, pos, ref, gt, sample)
+    filtered_snp_set_list = [set(sample_snps.filtered_snp_list) for sample_snps in sample_snps_list]  # list of set of SnpTuple namedtuples having (chrom, pos, ref, gt, sample)
     alt_dict_list = [sample_snps.alt_dict for sample_snps in sample_snps_list]
     format_dict_list = [sample_snps.format_dict for sample_snps in sample_snps_list]
     call_dict_list = [sample_snps.call_dict for sample_snps in sample_snps_list]
@@ -588,19 +589,18 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
         tabulate_results(snp_set_list, all_samples, table_file)
 
     # Generate a venn diagram if the necessary packages are installed
-    #generate_venn_diagrams(snp_set_list, base_vcf_file_name_list, 'snps.venn.pdf')
     if num_vcf_files >= 2 and num_vcf_files <= 6:
         try:
             import matplotlib
             matplotlib.use("Agg")
             from matplotlib import pyplot as plt
-        except:
+        except ImportError:
             logging.info("Skipping venn diagram creation.  Requires matplotlib.")
             exit(1)
     if num_vcf_files == 2 or num_vcf_files == 3:
         try:
-            from matplotlib_venn import venn2, venn3, venn3_unweighted, venn2_circles, venn3_circles
-        except:
+            from matplotlib_venn import venn2, venn3, venn3_unweighted, venn2_circles, venn3_circles  # noqa F401
+        except ImportError:
             logging.info("Skipping venn diagram creation.  Requires matplotlib_venn.")
             exit(1)
 
@@ -655,7 +655,7 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
         fontsize = 12
         titlesize = 14
         legend_loc = None
-        venn_func_dict = {3:venn.venn3, 4:venn.venn4, 5:venn.venn5, 6:venn.venn6}
+        venn_func_dict = {3: venn.venn3, 4: venn.venn4, 5: venn.venn5, 6: venn.venn6}
         fig, axes = plt.subplots(1, 2, figsize=(11, 8), tight_layout=True)
 
         plt_idx = 0
@@ -717,7 +717,7 @@ def narrow(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, e
         row = [call.sample, record.CHROM, int(record.POS), record.REF, bases] + call_data_list
         snps.append(row)
 
-    snps = sorted(snps, key=lambda snp: snp[1:3] + snp[0:1]) # sort by chrom, then pos, then sample
+    snps = sorted(snps, key=lambda snp: snp[1:3] + snp[0:1])  # sort by chrom, then pos, then sample
 
     out = csv.writer(sys.stdout, delimiter='\t', lineterminator=os.linesep)
     header = ["Sample", "CHROM", "POS", "REF", "ALT"]
