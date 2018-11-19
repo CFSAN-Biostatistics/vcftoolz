@@ -29,6 +29,11 @@ def get_unique_set_elements(sets):
     Returns
     -------
     unique_element_sets : list of set
+
+    Examples
+    --------
+    get_unique_set_elements([{"100","110","101","111"}, {"110","010","111","011"}, {"101","111","011","001"}])
+    [{'100'}, {'010'}, {'001'}]
     """
     # To avoid quadratic runtime, make an initial pass to determine which elements appear in only one set
     element_counts = collections.Counter(itertools.chain.from_iterable(sets))
@@ -50,6 +55,11 @@ def get_missing_set_elements(sets):
     Returns
     -------
     missing_element_sets : list of set
+
+    Examples
+    --------
+    get_missing_set_elements([{"100","110","101","111"}, {"110","010","111","011"}, {"101","111","011","001"}])
+    [{'011'}, {'101'}, {'110'}]
     """
     # To avoid quadratic runtime, make an initial pass to determine which elements appear in more than one set
     element_counts = collections.Counter(itertools.chain.from_iterable(sets))
@@ -79,6 +89,11 @@ def get_set_intersections(sets):
             the combination.
         set : set
             The set formed by the overlapping input sets.
+
+    Examples
+    --------
+    >>> get_set_intersections([{"100","110","101","111"}, {"110","010","111","011"}, {"101","111","011","001"}])
+    [('111', {'111'}), ('011', {'011'}), ('101', {'101'}), ('001', {'001'}), ('110', {'110'}), ('010', {'010'}), ('100', {'100'})]
     """
     num_combinations = 2 ** len(sets)
     bit_flags = [2 ** n for n in range(len(sets))]
