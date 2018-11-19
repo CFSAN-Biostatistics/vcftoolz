@@ -11,7 +11,7 @@ from vcftoolz import vcftoolz
 
 
 def test_get_unique_set_elements():
-    """Given a list of sets, verify it returns a new list of sets with the overlapping
+    """Test: Given a list of sets, return a new list of sets with the overlapping
     elements removed, leaving only the set elements that are unique to each
     set.
     """
@@ -41,7 +41,7 @@ def test_get_unique_set_elements():
 
 
 def test_get_missing_set_elements():
-    """Given a list of sets, return a new list of sets containing the elements that are
+    """Test: Given a list of sets, return a new list of sets containing the elements that are
     missing from each set but are present in more than one other set.
     """
     missing_sets = vcftoolz.get_missing_set_elements([set()])
@@ -64,3 +64,14 @@ def test_get_missing_set_elements():
 
     missing_sets = vcftoolz.get_missing_set_elements([{"100", "110", "101", "111"}, {"110", "010", "111", "011"}, {"101", "111", "011", "001"}])
     assert(missing_sets == [{"011"}, {"101"}, {"110"}])
+
+
+def test_get_set_intersections():
+    """Test: Given a list of sets, return a new list of sets with all the possible
+    mutually exclusive overlapping combinations of those sets.  Another way
+    to think of this is the mutually exclusive sections of a venn diagram
+    of the sets.  If the original list has N sets, the returned list will
+    have (2**N)-1 sets.
+    """
+    intersections = vcftoolz.get_set_intersections([{"100","110","101","111"}, {"110","010","111","011"}, {"101","111","011","001"}])
+    assert(intersections == [('111', {'111'}), ('011', {'011'}), ('101', {'101'}), ('001', {'001'}), ('110', {'110'}), ('010', {'010'}), ('100', {'100'})])
