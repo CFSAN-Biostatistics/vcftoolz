@@ -53,7 +53,7 @@ def parse_arguments(system_args):
     subparser.add_argument("--exclude_filtered", dest="exclude_filtered", action="store_true",      help="Exclude filtered calls (FT or FILTER is not PASS).")
     subparser.add_argument("--exclude_missing",  dest="exclude_missing",  action="store_true",      help="Exclude calls with all data elements missing.")
     subparser.add_argument("--truth",            dest="truth_flag",       action="store_true",      help="Additional metrics are generated assuming the first VCF file is the truth. This also triggers extra analysis of filtered calls.")
-    subparser.add_argument("--tableFile",        dest="table_file",       type=str, metavar='FILE', help="Tabulate the results in the specified tab-separated-value file.")
+    subparser.add_argument("--tabulate",         dest="table_file",       type=str, metavar='FILE', help="Tabulate the results in the specified tab-separated-value file.")
     subparser.set_defaults(func=compare_command)
 
     help_str = "Reformat VCF data into a tall, narrow format."
