@@ -33,6 +33,7 @@ setup(
     author_email='steven.davis@fda.hhs.gov',
     url='https://github.com/CFSAN-Biostatistics/vcftoolz',
     packages=[
+        'pyvenn',
         'vcftoolz',
     ],
     package_dir={'vcftoolz':
@@ -43,9 +44,10 @@ setup(
     zip_safe=False,
     keywords=['bioinformatics', 'NGS', 'vcftoolz'],
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: BSD License',
+        'Intended Audience :: Science/Research',
+        'License :: Freely Distributable',
         'Natural Language :: English',
         "Programming Language :: Python :: 2",
         'Programming Language :: Python :: 2.7',
@@ -54,6 +56,7 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Topic :: Scientific/Engineering :: Bio-Informatics',
     ],
     entry_points={'console_scripts': ['vcftoolz = vcftoolz.cli:main']},
     setup_requires=["pytest-runner"],
