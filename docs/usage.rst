@@ -103,7 +103,7 @@ When 3, 4, 5, or 6 VCF files are compared, one of the following Venn diagrams is
 
 Tabulated results
 ~~~~~~~~~~~~~~~~~
-A detailed spreadsheet can be generated with the ``--tableFile`` command line option.
+A detailed spreadsheet can be generated with the ``--tabulate`` command line option.
 The spreadsheet contains one row per position and one column per sample.  The rows are
 ordered in such a way that variants found in multiple files are grouped together. In
 other words, each section of the Venn diagram will have corresponding rows grouped
