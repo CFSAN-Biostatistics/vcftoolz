@@ -19,14 +19,14 @@ bibliography: paper.bib
 # Summary and Need Statement
 
 The analysis of next-generation sequence data often involves variant calling --
-a process for discovering genomic variants, which are differences between genomes.
+the process of identifying differences between genomes.
 The standard output file format of variant callers is the Variant Call Format
 (VCF) (https://github.com/samtools/hts-specs).
 
-Researchers have a need to view and compare VCF files.  The behaviour of
-alternative variant calling algorithms can be analysed by comparing the VCF files
-produced by those algorithms.  The performance of a variant calling algorithm
-can be evaluated by comparing against a known truth VCF dataset.
+Researchers need to view and compare VCF files when comparing the
+behavior of different variant calling algorithms (and even the same algorithm
+with different parameters). Additionally, the performance of a variant calling
+algorithm can be evaluated by comparing against a known truth VCF dataset.
 
 Here, we present ``vcftoolz``, software to facilitate comparing and evaluating
 the variant calls in VCF files.  The core functionality of ``vcftoolz`` is the
@@ -39,7 +39,7 @@ produced by ``vcftools`` are not available from other tools.
 The ``vcftoolz`` software is being used as part of an ongoing effort to compare
 and evaluate the variant callers used by multiple government agencies involved
 in the analysis of pathogenic organisms of interest to food safety. In this effort,
-we use multiple variant callers to construct VCF files from closely-related pathogens.
+we use multiple variant callers to construct VCF files from food-borne pathogens.
 The ``vcftoolz`` software identifies the concordance between the VCF files produced
 by the alternative variant callers and facilitates algorithm improvements.
  
