@@ -28,7 +28,7 @@ def _make_test_vcf_file(test_record):
 
     Returns
     -------
-    Open file handle positioned at the start of the in-memory VCF file continung a single
+    Open file handle positioned at the start of the in-memory VCF file containing a single
     VCF record.
     """
     if sys.version_info < (3,):

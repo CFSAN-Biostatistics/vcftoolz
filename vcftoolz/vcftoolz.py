@@ -158,9 +158,8 @@ def get_sample_list(vcf_path):
     samples : list of str
         List of sample names in the VCF file
     """
-    with open(vcf_path) as inp:
-        reader = vcf.VCFReader(inp)
-        return reader.samples
+    reader = vcf.VCFReader(filename=vcf_path)
+    return reader.samples
 
 
 SnpTuple = collections.namedtuple("SnpTuple", "chrom pos ref gt sample")
@@ -233,7 +232,9 @@ def get_snp_list(truth_flag, vcf_path, exclude_snps, exclude_indels, exclude_var
             format_dict : dictionary mapping from keyed snp tuple to FORMAT string
             call_dict : dictionary mapping from keyed snp tuple to namedtuple of genotype data elements
     """
-    with open(vcf_path) as input:
+    compressed = vcf_path.lower().endswith(".gz")
+    mode = "rb" if compressed else "rt"
+    with open(vcf_path, mode) as input:
         snps = []
         filtered_snps = []
         alt_dict = dict()
@@ -392,8 +393,9 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
         exit(1)
 
     # Get short base file name for each input
-    vcf_file_name_list = [os.path.basename(p) for p in vcf_path_list]
-    base_vcf_file_name_list = [os.path.splitext(f)[0] for f in vcf_file_name_list]
+    base_vcf_file_name_list = [os.path.basename(p) for p in vcf_path_list]
+    base_vcf_file_name_list = [f[: -3] if f.lower().endswith(".gz") else f for f in base_vcf_file_name_list]
+    base_vcf_file_name_list = [f[: -4] if f.lower().endswith(".vcf") else f for f in base_vcf_file_name_list]
     num_vcf_files = len(base_vcf_file_name_list)
 
     # Get the list of sample names in each VCF file
