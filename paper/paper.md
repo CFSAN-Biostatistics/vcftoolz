@@ -31,8 +31,12 @@ algorithm can be evaluated by comparing against a known truth VCF dataset.
 Here, we present ``vcftoolz``, software to facilitate comparing and evaluating
 the variant calls in VCF files.  The core functionality of ``vcftoolz`` is the
 capability to compare two or more VCF files, producing a report, Venn Diagrams,
-and a spreadsheet identifying the concordance between the VCF files.  The artifacts 
-produced by ``vcftools`` are not available from other tools.
+and a spreadsheet identifying the concordance between the VCF files.  The artifacts
+produced by ``vcftoolz`` are not available from other tools.
+
+The ``vcftoolz`` software is designed to work with bacterial variant files. It
+has been tested in a 3-way comparison of VCF files, with each file having 200
+samples and 500 snps per sample for a total of 100,000 variants in each file.
 
 # Related Research
 
@@ -42,7 +46,7 @@ in the analysis of pathogenic organisms of interest to food safety. In this effo
 we use multiple variant callers to construct VCF files from food-borne pathogens.
 The ``vcftoolz`` software identifies the concordance between the VCF files produced
 by the alternative variant callers and facilitates algorithm improvements.
- 
+
 # Prior Related Work
 
 The ``RTG Tools`` package [@RTGtools] has advanced capabilities to compare VCF files containing complex
