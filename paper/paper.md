@@ -68,5 +68,4 @@ https://github.com/CFSAN-Biostatistics/vcftoolz
 PyPI Distribution:
 https://pypi.python.org/pypi/vcftoolz
 
-
 # References
