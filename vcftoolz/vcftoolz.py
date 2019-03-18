@@ -352,7 +352,9 @@ def print_snp_detail_list(snp_set, alt_dict, format_dict, call_dict):
             format_str = format_dict[snp]
             format_keys = format_str.split(":")
             call_data = call_dict[snp]
-            call_data_str = ":".join([str(getattr(call_data, k, None)) for k in format_keys])
+            call_data_list = [getattr(call_data, k, None) for k in format_keys]
+            call_data_list = ['.' if v is None else str(v) for v in call_data_list]
+            call_data_str = ":".join(call_data_list)
             fields.append(format_str)
             fields.append(call_data_str)
             print('\t'.join(fields))
