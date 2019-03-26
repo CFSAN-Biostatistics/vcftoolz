@@ -326,6 +326,67 @@ def tabulate_results(snp_sets, samples, table_file_path):
                 f.write("%s\n" % '\t'.join(spreadsheet_row))
 
 
+def is_list_like(obj):
+    """Determine if an object is an iterable collection, but not a string.
+
+    Parameters
+    ----------
+    obj : object
+        Object to inspect.
+
+    Returns
+    -------
+    true if object is a collection, but not a string.
+
+    Examples
+    --------
+    >>> is_list_like(None)
+    False
+    >>> is_list_like(0)
+    False
+    >>> is_list_like("aaa")
+    False
+    >>> is_list_like(r"aaa")
+    False
+    >>> is_list_like(u"aaa")
+    False
+    >>> is_list_like(b"aaa")
+    False
+    >>> is_list_like([1,2,3])
+    True
+    >>> is_list_like((1,2,3))
+    True
+    """
+    if obj is None:
+        return False
+    if isinstance(obj, str):
+        return False
+    if isinstance(obj, bytes):
+        return False
+    if hasattr(obj, "__iter__"):
+        return True
+    return False
+
+
+def stringify_call_data_list(call_data_list, separator):
+    """Convert None to '.' while joining items in a list to make a string.
+
+    Parameters
+    ----------
+    call_data_list : list
+        VCF call data list
+    separator : str
+        Separator for items in list.
+
+    Returns
+    -------
+    s : str
+        List items joined with None converted to '.'
+    """
+    call_data_list = ['.' if v is None else str(v) for v in call_data_list]
+    return separator.join(call_data_list)
+
+
 def print_snp_detail_list(snp_set, alt_dict, format_dict, call_dict):
     """Print a list of snps.
 
@@ -353,8 +414,8 @@ def print_snp_detail_list(snp_set, alt_dict, format_dict, call_dict):
             format_keys = format_str.split(":")
             call_data = call_dict[snp]
             call_data_list = [getattr(call_data, k, None) for k in format_keys]
-            call_data_list = ['.' if v is None else str(v) for v in call_data_list]
-            call_data_str = ":".join(call_data_list)
+            call_data_list = [stringify_call_data_list(v, ',') if is_list_like(v) else v for v in call_data_list]
+            call_data_str = stringify_call_data_list(call_data_list, ':')
             fields.append(format_str)
             fields.append(call_data_str)
             print('\t'.join(fields))
@@ -715,7 +776,8 @@ def narrow(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, e
         else:
             alt_list = [str(variant) for variant in record.ALT]
             bases = ','.join(alt_list)
-        call_data_list = ['.' if item is None else item for item in call.data]
+        call_data_list = [stringify_call_data_list(v, ',') if is_list_like(v) else v for v in call.data]
+        call_data_list = ['.' if item is None else item for item in call_data_list]
         row = [call.sample, record.CHROM, int(record.POS), record.REF, bases] + call_data_list
         snps.append(row)
 
