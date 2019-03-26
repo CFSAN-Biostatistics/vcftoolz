@@ -11,7 +11,9 @@ VCF Toolz
 .. .. image:: https://img.shields.io/travis/CFSAN-Biostatistics/vcftoolz.svg
 ..        :target: https://travis-ci.org/CFSAN-Biostatistics/vcftoolz
 
-
+.. Image showing the JOSS paper badge
+.. image:: http://joss.theoj.org/papers/10.21105/joss.01144/status.svg
+   :target: https://doi.org/10.21105/joss.01144
 
 Tools for working with Variant Call Format files.
 
@@ -39,9 +41,9 @@ Features
 Citing VCF Toolz
 --------------------------------------
 
-To cite VCF Toolz, please reference the VCF Toolz GitHub repository:
+To cite VCF Toolz, please reference the VCF Toolz paper:
 
-    https://github.com/CFSAN-Biostatistics/vcftoolz
+    https://doi.org/10.21105/joss.01144
 
 
 License
