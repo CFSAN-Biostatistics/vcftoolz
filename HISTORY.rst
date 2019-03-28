@@ -3,6 +3,10 @@
 History
 =======
 
+1.2.0 (2019-03-??)
+---------------------
+* Add the ``count`` command to count positions and calls in the VCF file.
+
 1.1.1 (2019-03-26)
 ---------------------
 * Replace None with '.' when printing call data.

@@ -69,6 +69,19 @@ def parse_arguments(system_args):
     subparser.add_argument("--exclude_missing",  dest="exclude_missing",  action="store_true",      help="Exclude calls with all data elements missing.")
     subparser.set_defaults(func=narrow_command)
 
+    help_str = "Count the number of positions and calls."
+    description = "Count the number of positions and calls.  Output is printed to stdout."
+    subparser = subparsers.add_parser("count", formatter_class=formatter_class, description=description, help=help_str)
+    subparser.add_argument(                      dest="vcf_path",         type=str, metavar="VCF",  help="VCF file")  # noqa: E201
+    subparser.add_argument("--exclude_snps",     dest="exclude_snps",     action="store_true",      help="Exclude snp calls. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
+    subparser.add_argument("--exclude_indels",   dest="exclude_indels",   action="store_true",      help="Exclude insertions and deletions. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
+    subparser.add_argument("--exclude_vars",     dest="exclude_vars",     action="store_true",      help="Exclude variants other than snps and indels.")
+    subparser.add_argument("--exclude_refs",     dest="exclude_refs",     action="store_true",      help="Exclude reference calls.")
+    subparser.add_argument("--exclude_hetero",   dest="exclude_hetero",   action="store_true",      help="Exclude heterozygous calls.")
+    subparser.add_argument("--exclude_filtered", dest="exclude_filtered", action="store_true",      help="Exclude filtered calls (FT or FILTER is not PASS).")
+    subparser.add_argument("--exclude_missing",  dest="exclude_missing",  action="store_true",      help="Exclude calls with all data elements missing.")
+    subparser.set_defaults(func=count_command)
+
     args = parser.parse_args(system_args)
     return args
 
@@ -103,6 +116,19 @@ def narrow_command(args):
         or other purposes.
     """
     vcftoolz.narrow(args.vcf_path, args.exclude_snps, args.exclude_indels, args.exclude_vars, args.exclude_refs, args.exclude_hetero, args.exclude_filtered, args.exclude_missing)
+
+
+def count_command(args):
+    """Count the number of positions and calls.
+
+    Parameters
+    ----------
+    args : Namespace
+        Command line arguments stored as attributes of a Namespace, usually
+        parsed from sys.argv, but can be set programmatically for unit testing
+        or other purposes.
+    """
+    vcftoolz.count(args.vcf_path, args.exclude_snps, args.exclude_indels, args.exclude_vars, args.exclude_refs, args.exclude_hetero, args.exclude_filtered, args.exclude_missing)
 
 
 def run_command_from_args(args):

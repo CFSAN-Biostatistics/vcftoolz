@@ -128,3 +128,26 @@ VCF files contain the variant.  For example:
 * 0 indicates none of the VCF files contained a variant at this position for this sample
 * G-111 indicates an alternate allele G found in all 3 VCF files specified on the command line.
 * T-011 indicates an alternate allele T found in the 2nd and 3rd VCF files specified on the command line.
+
+Count
+-----
+Sometimes you just want a count of the number of positions and calls in a VCF file.
+The count command gives you exactly that, while allowing you to restrict which calls
+are eligible for counting.
+
+To count positions and calls in the VCF file::
+
+    vcftoolz count file.vcf > narrow.tsv
+
+Output is written to stdout::
+
+    282 positions
+    846 calls
+
+By default, all genotype calls are included in the output.  To count only homozygous snps::
+
+  vcftoolz count --exclude_indels --exclude_vars --exclude_refs --exclude_hetero --exclude_filtered --exclude_missing file.vcf
+
+To see a full list of options for excluding genotype calls::
+
+  vcftoolz count --help

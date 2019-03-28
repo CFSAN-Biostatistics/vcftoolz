@@ -144,6 +144,27 @@ def verify_non_empty_input_files(error_prefix, file_list):
     return bad_count
 
 
+def open_vcf_file(vcf_path):
+    """Open a vcf file for reading. Detects and handles gz compressed files.
+
+    Parameters
+    ----------
+    vcf_path : str
+        Path to the VCF file
+
+    Returns
+    -------
+    open file handle
+    """
+    bad_files_count = verify_non_empty_input_files("VCF file", [vcf_path])
+    if bad_files_count > 0:
+        exit(1)
+    compressed = vcf_path.lower().endswith(".gz")
+    mode = "rb" if compressed else "rt"
+    handle = open(vcf_path, mode)
+    return handle
+
+
 def get_sample_list(vcf_path):
     """
     Get the list of sample names in a VCF file.
@@ -761,13 +782,7 @@ def narrow(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, e
     exclude_missing : bool
         Exclude calls with all data elements missing.
     """
-    if len(vcf_path) > 0:
-        bad_files_count = verify_non_empty_input_files("VCF file", [vcf_path])
-        if bad_files_count > 0:
-            exit(1)
-        input = open(vcf_path)
-    else:
-        input = sys.stdin
+    input = open_vcf_file(vcf_path)
 
     snps = []
     for record, call in call_generator(input, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
@@ -790,3 +805,39 @@ def narrow(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, e
     out.writerow(header)
     for row in snps:
         out.writerow(row)
+
+
+def count(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
+    """Count the number of positions and calls.
+
+    By default, all calls are included in the output.
+
+    Parameters
+    ----------
+    vcf_path : str
+        Path to the VCF file
+    exclude_snps : bool
+        Exclude snp calls.
+    exclude_indels : bool
+        Exclude insertions and deletions.
+    exclude_vars : bool
+        Exclude variants other than snps and indels.
+    exclude_refs : bool
+        Exclude reference calls.
+    exclude_hetero : bool
+        Exclude heterozygous calls.
+    exclude_filtered : bool
+        Exclude filtered calls (FT or FILTER is not PASS).
+    exclude_missing : bool
+        Exclude calls with all data elements missing.
+    """
+    input = open_vcf_file(vcf_path)
+
+    position_set = set()
+    call_count = 0
+    for record, call in call_generator(input, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
+        position_set.add(record.POS)
+        call_count += 1
+
+    print("%d positions" % len(position_set))
+    print("%d calls" % call_count)
