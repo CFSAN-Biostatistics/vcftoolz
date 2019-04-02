@@ -8,6 +8,7 @@ History
 * Add the ``count`` command to count positions and calls in the VCF file.
 * Add the ``plot`` command to plot calls along the length of the genome and show
   the location of filtered calls.
+* Change the text of the compare report to refer to "Calls", not "Sample snps".
 * Drop support for Python 3.4, which is not supported by matplotlib.
 * Add support for Python 3.7.
 

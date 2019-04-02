@@ -559,23 +559,23 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
     for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
         count = len(snp_set_list[i])
-        print("{count}\tSample snps in {dataset}".format(dataset=dataset, count=count))
+        print("{count}\tCalls in {dataset}".format(dataset=dataset, count=count))
     print()
 
     if truth_flag:
         true_positive_snps = snp_set_list[0] & snp_set_list[1]
         true_positive_snps_count = len(true_positive_snps)
-        print("{count}\tTrue positive sample snps".format(count=true_positive_snps_count))
+        print("{count}\tTrue positive calls".format(count=true_positive_snps_count))
     for i in range(num_vcf_files):
         dataset = base_vcf_file_name_list[i]
         count = len(unique_snps_sets[i])
         if not truth_flag:
-            unique_snps_description = "Sample snps only in {dataset}"
+            unique_snps_description = "Calls only in {dataset}"
         elif i == 0:
-            unique_snps_description = "False negative sample snps"
+            unique_snps_description = "False negative calls"
             false_negative_snps_count = count
         else:
-            unique_snps_description = "False positive sample snps"
+            unique_snps_description = "False positive calls"
             false_positive_snps_count = count
         print(("{count}\t" + unique_snps_description).format(dataset=dataset, count=count))
     if truth_flag:
@@ -591,7 +591,7 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
         for i in range(num_vcf_files):
             dataset = base_vcf_file_name_list[i]
             count = len(missing_snps_sets[i])
-            print("{count}\tSample snps missing in {dataset}, but present in at least 2 other VCF files".format(dataset=dataset, count=count))
+            print("{count}\tCalls missing in {dataset}, but present in at least 2 other VCF files".format(dataset=dataset, count=count))
         print()
 
     # Print the effectiveness of the snp filters
@@ -613,9 +613,9 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
         print("{count}\tFalse negative snp positions incorrectly removed by filters".format(count=len(incorrectly_filtered_positions)))
         print("{count}\tTrue negative snp positions correctly removed by filters".format(count=len(correctly_filtered_positions)))
         print()
-        print("{count}\tTotal filtered sample snps".format(count=len(filtered_snps)))
-        print("{count}\tFalse negative sample snps incorrectly removed by filters".format(count=len(incorrectly_filtered_snps)))
-        print("{count}\tTrue negative sample snps correctly removed by filters".format(count=len(correctly_filtered_snps)))
+        print("{count}\tTotal filtered calls".format(count=len(filtered_snps)))
+        print("{count}\tFalse negative calls incorrectly removed by filters".format(count=len(incorrectly_filtered_snps)))
+        print("{count}\tTrue negative calls correctly removed by filters".format(count=len(correctly_filtered_snps)))
         print()
 
     # Print the positions present in only one of the VCF files
@@ -643,13 +643,13 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
 
     # Print the snps present in only one of the VCF files
     for i in range(num_vcf_files):
-        print("\nSample snps only in %s" % base_vcf_file_name_list[i])
+        print("\nCalls only in %s" % base_vcf_file_name_list[i])
         print_snp_detail_list(unique_snps_sets[i], alt_dict_list[i], format_dict_list[i], call_dict_list[i])
 
     # Print the snps missing in each of the VCF files
     if num_vcf_files >= 3:
         for i in range(num_vcf_files):
-            print("\nSample snps missing in %s, but present in at least 2 other VCF files:" % base_vcf_file_name_list[i])
+            print("\nCalls missing in %s, but present in at least 2 other VCF files:" % base_vcf_file_name_list[i])
             sorted_snps = sorted(list(missing_snps_sets[i]))
             if len(sorted_snps) == 0:
                 print("None")
@@ -663,14 +663,14 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
     if truth_flag:
         # Get the full SnpTuple for all known incorrectly filtered snps
         incorrectly_filtered_snps = set([s for s in filtered_snp_set_list[1] if (s.chrom, s.pos, s.sample) in incorrectly_filtered_snps])
-        print("\nFalse negative sample snps incorrectly removed by filters")
+        print("\nFalse negative calls incorrectly removed by filters")
         print_snp_detail_list(incorrectly_filtered_snps, alt_dict_list[1], format_dict_list[1], call_dict_list[1])
 
     # Print the true negative filtered snps
     if truth_flag:
         # Get the full SnpTuple for all known correctly filtered snps
         correctly_filtered_snps = set([s for s in filtered_snp_set_list[1] if (s.chrom, s.pos, s.sample) in correctly_filtered_snps])
-        print("\nTrue negative sample snps correctly removed by filters")
+        print("\nTrue negative calls correctly removed by filters")
         print_snp_detail_list(correctly_filtered_snps, alt_dict_list[1], format_dict_list[1], call_dict_list[1])
 
     # Tabulate all the venn diagram sections into a TSV spreadsheet
