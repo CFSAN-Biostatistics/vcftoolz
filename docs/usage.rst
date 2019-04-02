@@ -151,3 +151,30 @@ By default, all genotype calls are included in the output.  To count only homozy
 To see a full list of options for excluding genotype calls::
 
   vcftoolz count --help
+
+
+Plot
+----
+The plot command shows a bar-chart of the locations of calls along the length of the genome. This is intended for VCF
+files with multiple samples. The height of the bars indicates the number of samples having calls at each position.
+In addition, a cumulative sum of calls is plotted (right axis).  The cumsum line is useful to detect areas of
+high-density snps.  By default, every CHROM is included in the plot. The x-axis depicts the genome with contigs
+arranged in order from largest to smallest. A command line option lets you plot a single CHROM, which might be useful
+to zoom-in on a particular region. The plot command also emits a list of contigs to stdout with the start and end
+position of each. If the VCF file contains failed calls, there will be a separate plot depicting the failed calls for
+every failure reason found in the VCF file.  Note that some calls can be failed for more than one reason and therefore
+some calls will be drawn more than once.
+
+To plot calls::
+
+    vcftoolz plot --exclude_refs --exclude_missing file.vcf reference.fasta image.png
+
+By default, all genotype calls are included in the output.  Command line options allow you to exclude some calls.
+The plot command displays additional useful information when it finds filtered calls.  For that reason, excluding
+filtered calls is not recommended.
+
+To see a full list of options for excluding genotype calls::
+
+  vcftoolz plot --help
+
+.. image:: sample-plot.png
