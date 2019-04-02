@@ -6,12 +6,16 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
+from Bio import SeqIO
 import csv
 import collections
 import itertools
 import logging
+import numpy as np
 import os
+import pandas as pd
 import sys
+from timeit import default_timer as timer
 import vcf
 from vcftoolz.vcf_call_parser import call_alleles, call_generator, is_filtered_call
 
@@ -841,3 +845,164 @@ def count(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, ex
 
     print("%d positions" % len(position_set))
     print("%d calls" % call_count)
+
+
+def plot(vcf_path, reference_path, output_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing, chrom=None):
+    """Count the number of positions and calls.
+
+    By default, all calls are included in the output.
+
+    Parameters
+    ----------
+    vcf_path : str
+        Path to the VCF file
+    reference_path : str
+        Path to the reference fasta file
+    output_path : str
+        Output file.  You should use the extension .pdf or .png.
+    exclude_snps : bool
+        Exclude snp calls.
+    exclude_indels : bool
+        Exclude insertions and deletions.
+    exclude_vars : bool
+        Exclude variants other than snps and indels.
+    exclude_refs : bool
+        Exclude reference calls.
+    exclude_hetero : bool
+        Exclude heterozygous calls.
+    exclude_filtered : bool
+        Exclude filtered calls (FT or FILTER is not PASS).
+    exclude_missing : bool
+        Exclude calls with all data elements missing.
+    chrom : str, optional, defaults to None
+        When specified, restricts the plot to a single contig.  Otherwise, all the contigs are joined together
+        in order of decreasing size.
+    """
+    import matplotlib.pylab as plt
+
+    # Determine the length of each contig
+    contig_length_dict = collections.Counter()
+    with open(reference_path, "r") as handle:
+        for record in SeqIO.parse(handle, "fasta"):
+            if chrom is None or chrom == record.id:
+                contig_length_dict[record.id] = len(record.seq)
+
+    # Collect all the records and calls. Store them so we can loop through the list more than once below.
+    start = timer()
+    input = open_vcf_file(vcf_path)
+    record_call_tuples = list()
+    for record, call in call_generator(input, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
+        if chrom is None or chrom == record.CHROM:
+            record_call_tuples.append((record, call))
+    input.close()
+    end = timer()
+    logging.info("%.1f seconds parsing vcf file" % (end - start))
+
+    # Count calls passing all filters
+    # defaultdict key = contig, value = Counter of calls per position
+    start = timer()
+    contig_call_counts = collections.defaultdict(collections.Counter)
+    for record, call in record_call_tuples:
+        if not is_filtered_call(record, call):
+            contig_call_counts[record.CHROM][record.POS] += 1
+    end = timer()
+    logging.info("%.1f seconds counting calls passing all filters" % (end - start))
+
+    # Count calls failing filters
+    # defaultdict key = filter, value = (defaultdict key = contig, value = Counter of calls per position)
+    start = timer()
+    filtered_reason_counts = collections.Counter()
+    filtered_contig_call_counts = collections.defaultdict(lambda: collections.defaultdict(collections.Counter))
+    for record, call in record_call_tuples:
+        try:
+            filt = call.data.FT     # If there are filters per sample, use them
+        except AttributeError:
+            filt = record.FILTER    # Otherwise, use the filter for the whole record
+        if not filt or filt == "PASS":  # filter is not set or set to PASS
+            continue
+
+        # There might be multiple filter reasons per call
+        filters = filt.split(';')
+        for filter in filters:
+            filtered_reason_counts[filter] += 1
+            filtered_contig_call_counts[filter][record.CHROM][record.POS] += 1
+    end = timer()
+    logging.info("%.1f seconds counting calls failing filters" % (end - start))
+
+    def plotter(ax_left, ax_right, contig_length_dict, contig_call_counts, title):
+        # Create an arbitrary genome with the contigs lined-up in order of decreasing size.
+        # Count the calls at the genome positions.
+        length_of_all_prior_contigs = 0
+        genome_calls_per_pos = dict()
+        for contig, length in contig_length_dict.most_common():
+            calls_per_contig_pos = contig_call_counts[contig]
+            for contig_pos in calls_per_contig_pos:
+                genome_calls_per_pos[contig_pos + length_of_all_prior_contigs] = calls_per_contig_pos[contig_pos]
+            length_of_all_prior_contigs += length
+
+        # Put entries at first and last position to make sure cumsum plot extends all the way left and right
+        if 1 not in genome_calls_per_pos:
+            genome_calls_per_pos[1] = 0
+        if length_of_all_prior_contigs not in genome_calls_per_pos:
+            genome_calls_per_pos[length_of_all_prior_contigs] = 0
+        lists = sorted(genome_calls_per_pos.items())  # list of tuples, sorted by position
+        x, y = zip(*lists)  # unpack a list of pairs into two tuples
+
+        y_right = np.cumsum(y)
+        ax_right.plot(x, y_right, color="C1", zorder=1)
+        ax_right.set_ylabel("Cumulative Calls", color="C1")
+
+        ax_left.bar(x, y, linewidth=1, edgecolor="C0", zorder=2)
+        ax_left.set_ylabel("Calls", color="C0")
+        ax_left.set_title(title)
+
+        return np.max(x), np.max(y), np.max(y_right)
+
+    start = timer()
+    num_subplots = 1 + len(filtered_reason_counts)
+    figure, axes_left = plt.subplots(nrows=num_subplots, ncols=1, figsize=(8.5, 2 * num_subplots), tight_layout=True)
+    if num_subplots == 1:
+        axes_left = [axes_left]
+    axes_right = [ax.twinx() for ax in axes_left]
+    title = "Calls Passing All Filters"
+    xmax, ymax_left, ymax_right = plotter(axes_left[0], axes_right[0], contig_length_dict, contig_call_counts, title)
+    call_counts = [ymax_right]
+    call_reasons = [title]
+    for i, (filter, _) in enumerate(filtered_reason_counts.most_common()):
+        contig_call_counts = filtered_contig_call_counts[filter]
+        title = "Calls Failing Filter " + filter
+        ax_xmax, ax_left_ymax, ax_right_ymax = plotter(axes_left[1 + i], axes_right[1 + i], contig_length_dict, contig_call_counts, title)
+        xmax = max(xmax, ax_xmax)
+        ymax_left = max(ymax_left, ax_left_ymax)
+        ymax_right = max(ymax_right, ax_right_ymax)
+        call_counts.append(ax_right_ymax)
+        call_reasons.append(title)
+    xmax *= 1.00
+    ymax_left *= 1.07
+    ymax_right *= 1.07
+    for ax in axes_left:
+        ax.set_xlim(left=0, right=xmax, auto=True)
+        ax.set_ylim(bottom=0, top=ymax_left, auto=True)
+    for ax in axes_right:
+        ax.set_ylim(bottom=0, top=ymax_right, auto=True)
+
+    plt.savefig(output_path)
+    plt.close()
+    end = timer()
+    logging.info("%.1f seconds plotting" % (end - start))
+
+    # Print table of contig start-end positions
+    df = pd.DataFrame(contig_length_dict.most_common())
+    df.columns = ["chrom", "length"]
+    df["end"] = np.cumsum(df.length)
+    df["start"] = 1 + df.end - df.length
+    df = df[["chrom", "start", "end", "length"]]
+    df.columns = ["Chrom", "Start", "End", "Length"]
+    print(df.to_string(index=False))
+    print()
+
+    # Print table of call counts
+    df = pd.DataFrame()
+    df["Filter"] = call_reasons
+    df["Count"] = call_counts
+    print(df.to_string(index=False))

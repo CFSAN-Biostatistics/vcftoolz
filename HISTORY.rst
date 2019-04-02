@@ -6,6 +6,10 @@ History
 1.2.0 (2019-03-??)
 ---------------------
 * Add the ``count`` command to count positions and calls in the VCF file.
+* Add the ``plot`` command to plot calls along the length of the genome and show
+  the location of filtered calls.
+* Drop support for Python 3.4, which is not supported by matplotlib.
+* Add support for Python 3.7.
 
 1.1.1 (2019-03-26)
 ---------------------

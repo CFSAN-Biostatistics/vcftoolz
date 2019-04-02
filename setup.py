@@ -15,6 +15,9 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read().replace('.. :changelog:', '')
 
 requirements = [
+    'biopython',
+    'numpy',
+    'pandas',
     'PyVCF',
     'matplotlib',
     'matplotlib_venn',
@@ -26,7 +29,7 @@ test_requirements = [
 
 setup(
     name='vcftoolz',
-    version='1.2.0a1',
+    version='1.2.0a2',
     description="Tools for working with Variant Call Format files.",
     long_description=readme + '\n\n' + history,
     author="Steve Davis",
