@@ -3,8 +3,9 @@
 History
 =======
 
-1.2.0 (2019-03-??)
+1.2.0 (2019-04-??)
 ---------------------
+* Fix defect in narrow command wrongly causing ALT=. when GT=.
 * Add the ``count`` command to count positions and calls in the VCF file.
 * Add the ``plot`` command to plot calls along the length of the genome and show
   the location of filtered calls.
