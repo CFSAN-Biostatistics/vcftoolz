@@ -762,6 +762,67 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
         plt.close()
 
 
+def build_narrow_row(record, call):
+    """Construct a list of narrow format row items for a single call in the narrow format.
+
+    Parameters
+    ----------
+    record : pyvcf Record
+        Example: Record(CHROM=CP006053.1, POS=3636502, REF=T, ALT=[N, G])
+    call : pyvcf Call
+        Example: Call(sample=CFSAN000212, CallData(GT=2, SDP=8, RD=0, AD=[3, 5], RDF=0, RDR=0, ADF=[1, 5], ADR=[2, 0], FT=PASS))
+        Example: Call(sample=CFSAN000191, CallData(GT=., SDP=2, RD=1, AD=[1, None], RDF=0, RDR=1, ADF=[1, None], ADR=[0, None], FT=VarFreq60;Depth3))
+
+    Returns
+    -------
+    row : list
+        List of narrow format row items for a single call.
+
+    Examples
+    --------
+    >>> call_format = "GT:SDP:RD:AD:RDF:RDR:ADF:ADR:FT"
+    >>> CallData = vcf.model.make_calldata_tuple(call_format.split(':'))
+
+    >>> # Single alternate allele, GT=1
+    >>> # CallData(GT=1, SDP=3, RD=0, AD=[3], RDF=0, RDR=0, ADF=[1], ADR=[2], FT=PASS))
+    >>> record = vcf.model._Record("CP006053.1", 3636502, "ID", "T", [vcf.model._Substitution(b) for b in ['G']], '.', "PASS", "NS=1", call_format, None)
+    >>> sample_data = CallData('1', 3, 0, [3], 0, 0, [1], [2], "PASS")
+    >>> call = vcf.model._Call(record, "CFSAN000191", sample_data)
+    >>> build_narrow_row(record, call)
+    ['CFSAN000191', 'CP006053.1', 3636502, 'T', 'G', '1', 3, 0, '3', 0, 0, '1', '2', 'PASS']
+
+    >>> # Single alternate allele, GT=.
+    >>> # CallData(GT=., SDP=3, RD=0, AD=[3], RDF=0, RDR=0, ADF=[1], ADR=[2], FT=PASS))
+    >>> record = vcf.model._Record("CP006053.1", 3636502, "ID", "T", [vcf.model._Substitution(b) for b in ['G']], '.', "PASS", "NS=1", call_format, None)
+    >>> sample_data = CallData('.', 3, 0, [3], 0, 0, [1], [2], "PASS")
+    >>> call = vcf.model._Call(record, "CFSAN000191", sample_data)
+    >>> build_narrow_row(record, call)
+    ['CFSAN000191', 'CP006053.1', 3636502, 'T', 'G', '.', 3, 0, '3', 0, 0, '1', '2', 'PASS']
+
+    >>> # Multiple alternate alleles, GT=2
+    >>> # CallData(GT=2, SDP=8, RD=0, AD=[3, 5], RDF=0, RDR=0, ADF=[1, 5], ADR=[2, 0], FT=PASS))
+    >>> record = vcf.model._Record("CP006053.1", 3636502, "ID", "T", [vcf.model._Substitution(b) for b in ['N', 'G']], '.', "PASS", "NS=1", call_format, None)
+    >>> sample_data = CallData('2', 8, 0, [3, 5], 0, 0, [1, 5], [2, 0], "PASS")
+    >>> call = vcf.model._Call(record, "CFSAN000191", sample_data)
+    >>> build_narrow_row(record, call)
+    ['CFSAN000191', 'CP006053.1', 3636502, 'T', 'N,G', '2', 8, 0, '3,5', 0, 0, '1,5', '2,0', 'PASS']
+
+    >>> # Multiple alternate alleles, GT=.
+    >>> # CallData(GT=., SDP=2, RD=1, AD=[1, None], RDF=0, RDR=1, ADF=[1, None], ADR=[0, None], FT=VarFreq60;Depth3))
+    >>> record = vcf.model._Record("CP006053.1", 3636502, "ID", "T", [vcf.model._Substitution(b) for b in ['N', 'G']], '.', "PASS", "NS=1", call_format, None)
+    >>> sample_data = CallData('.', 2, 1, [1, None], 0, 1, [1, None], [0, None], "VarFreq60;Depth3")
+    >>> call = vcf.model._Call(record, "CFSAN000191", sample_data)
+    >>> build_narrow_row(record, call)
+    ['CFSAN000191', 'CP006053.1', 3636502, 'T', 'N,G', '.', 2, 1, '1,.', 0, 1, '1,.', '0,.', 'VarFreq60;Depth3']
+    """
+    alt_list = [str(variant) for variant in record.ALT]
+    alt_bases_str = ','.join(alt_list)
+    call_data_list = [stringify_call_data_list(v, ',') if is_list_like(v) else v for v in call.data]
+    call_data_list = ['.' if item is None else item for item in call_data_list]
+    row = [call.sample, record.CHROM, int(record.POS), record.REF, alt_bases_str] + call_data_list
+    return row
+
+
 def narrow(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
     """Convert a VCF file into a tab delimited set of snp calls, one per line.
 
@@ -790,14 +851,7 @@ def narrow(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, e
 
     snps = []
     for record, call in call_generator(input, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
-        if call.gt_bases is None:
-            bases = '.'
-        else:
-            alt_list = [str(variant) for variant in record.ALT]
-            bases = ','.join(alt_list)
-        call_data_list = [stringify_call_data_list(v, ',') if is_list_like(v) else v for v in call.data]
-        call_data_list = ['.' if item is None else item for item in call_data_list]
-        row = [call.sample, record.CHROM, int(record.POS), record.REF, bases] + call_data_list
+        row = build_narrow_row(record, call)
         snps.append(row)
 
     snps = sorted(snps, key=lambda snp: snp[1:3] + snp[0:1])  # sort by chrom, then pos, then sample
