@@ -36,6 +36,8 @@ Features
 * Reports precision, recall, and F1 score when the truth is known.
 * Reports the effectiveness of filtered variants when the truth is known.
 * Reformat the VCF file in a tall-narrow format for easy viewing and diffs.
+* Count samples, positions, calls, snps, indels, other variants, missing calls, and filter reasons.
+* Plot calls along the length of the genome and show the location of filtered calls.
 
 
 Citing VCF Toolz
