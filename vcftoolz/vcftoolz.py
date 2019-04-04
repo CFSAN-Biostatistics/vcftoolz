@@ -17,7 +17,7 @@ import pandas as pd
 import sys
 from timeit import default_timer as timer
 import vcf
-from vcftoolz.vcf_call_parser import call_alleles, call_generator, is_filtered_call
+from vcftoolz.vcf_call_parser import call_alleles, call_generator, is_snp_call, is_indel_call, is_other_variant_call, is_ref_call, is_filtered_call, is_missing_call
 
 
 def get_unique_set_elements(sets):
@@ -893,12 +893,74 @@ def count(vcf_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, ex
 
     position_set = set()
     call_count = 0
+    heterozygous_count = 0
+    homozygous_count = 0
+    ref_count = 0
+    snp_count = 0
+    indel_count = 0
+    other_variant_count = 0
+    filtered_count = 0
+    passing_count = 0
+    missing_count = 0
+    filtered_reason_counts = collections.Counter()
     for record, call in call_generator(input, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing):
         position_set.add(record.POS)
         call_count += 1
 
-    print("%d positions" % len(position_set))
-    print("%d calls" % call_count)
+        if call.is_het:
+            heterozygous_count += 1
+        else:
+            homozygous_count += 1
+
+        if is_ref_call(record, call):
+            ref_count += 1
+        if is_snp_call(record, call):
+            snp_count += 1
+        if is_indel_call(record, call):
+            indel_count += 1
+        if is_other_variant_call(record, call):
+            other_variant_count += 1
+        if is_missing_call(record, call):
+            missing_count += 1
+
+        try:
+            filt = call.data.FT     # If there are filters per sample, use them
+        except AttributeError:
+            filt = record.FILTER    # Otherwise, use the filter for the whole record
+        if filt is None:
+            pass
+        elif filt == "PASS":
+            passing_count += 1
+        else:
+            filtered_count += 1
+
+            # There might be multiple filter reasons per call
+            filters = filt.split(';')
+            for filter in filters:
+                filtered_reason_counts[filter] += 1
+
+    sample_list = get_sample_list(vcf_path)
+
+    rows = []
+    rows.append(("samples", len(sample_list)))
+    rows.append(("positions", len(position_set)))
+    rows.append(("calls", call_count))
+    rows.append(("heterozygous calls", heterozygous_count))
+    rows.append(("homozygous calls", homozygous_count))
+    rows.append(("reference calls", ref_count))
+    rows.append(("snp calls", snp_count))
+    rows.append(("indel calls", indel_count))
+    rows.append(("other variant calls", other_variant_count))
+    rows.append(("missing calls", missing_count))
+    rows.append(("calls PASS filter", passing_count))
+    rows.append(("calls failing any filter", filtered_count))
+    for filter, count in filtered_reason_counts.most_common():
+        rows.append(("calls failing filter %s" % filter, count))
+    max_width = 0
+    for label, count in rows:
+        max_width = max(max_width, len(str(count)))
+    for label, count in rows:
+        print("%*d %s" % (max_width, count, label))
 
 
 def plot(vcf_path, reference_path, output_path, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing, chrom=None):
