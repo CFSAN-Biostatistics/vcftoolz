@@ -2,6 +2,8 @@
 Usage
 ========
 
+.. highlight:: bash
+
 Narrow
 ------
 Some VCF files can be very wide and difficult to view with genotypes for many samples.
@@ -131,18 +133,31 @@ VCF files contain the variant.  For example:
 
 Count
 -----
-Sometimes you just want a count of the number of positions and calls in a VCF file.
-The count command gives you exactly that, while allowing you to restrict which calls
-are eligible for counting.
+The count command counts samples, positions, calls, snps, indels, other variants, missing calls, and
+filter reasons, while allowing you to restrict which calls are eligible for counting.
 
-To count positions and calls in the VCF file::
+To count metrics in the VCF file::
 
-    vcftoolz count file.vcf > narrow.tsv
+    vcftoolz count file.vcf
 
 Output is written to stdout::
 
+      3 samples
     282 positions
     846 calls
+      0 heterozygous calls
+    846 homozygous calls
+    194 reference calls
+    194 snp calls
+      0 indel calls
+      0 other variant calls
+    266 missing calls
+    388 calls PASS filter
+    192 calls failing any filter
+    187 calls failing filter Region
+      3 calls failing filter VarFreq60
+      1 calls failing filter RawDpth
+      1 calls failing filter Depth3
 
 By default, all genotype calls are included in the output.  To count only homozygous snps::
 
