@@ -69,8 +69,8 @@ def parse_arguments(system_args):
     subparser.add_argument("--exclude_missing",  dest="exclude_missing",  action="store_true",      help="Exclude calls with all data elements missing.")
     subparser.set_defaults(func=narrow_command)
 
-    help_str = "Count the number of positions and calls."
-    description = "Count the number of positions and calls.  Output is printed to stdout."
+    help_str = "Count the number of positions, calls, variants, filters, etc."
+    description = "Count samples, positions, calls, snps, indels, other variants, filtered calls, missing calls, and filter reasons.  Output is printed to stdout."
     subparser = subparsers.add_parser("count", formatter_class=formatter_class, description=description, help=help_str)
     subparser.add_argument(                      dest="vcf_path",         type=str, metavar="VCF",  help="VCF file")  # noqa: E201
     subparser.add_argument("--exclude_snps",     dest="exclude_snps",     action="store_true",      help="Exclude snp calls. A heterozygous call with both snp and indel is not excluded unless both snps and indels are excluded.")
