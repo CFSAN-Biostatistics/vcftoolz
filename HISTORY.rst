@@ -3,10 +3,11 @@
 History
 =======
 
-1.2.0 (2019-04-??)
+1.2.0 (2019-04-04)
 ---------------------
-* Fix defect in narrow command wrongly causing ALT=. when GT=.
-* Add the ``count`` command to count positions and calls in the VCF file.
+* Fix defect in narrow command wrongly printing ALT=. when GT=.
+* Add the ``count`` command to count samples, positions, calls, snps, indels,
+  other variants, filtered calls, missing calls, and filter reasons.
 * Add the ``plot`` command to plot calls along the length of the genome and show
   the location of filtered calls.
 * Change the text of the compare report to refer to "Calls", not "Sample snps".

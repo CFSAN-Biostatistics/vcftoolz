@@ -29,7 +29,7 @@ test_requirements = [
 
 setup(
     name='vcftoolz',
-    version='1.2.0a2',
+    version='1.2.0',
     description="Tools for working with Variant Call Format files.",
     long_description=readme + '\n\n' + history,
     author="Steve Davis",
