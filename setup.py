@@ -18,7 +18,7 @@ requirements = [
     'biopython',
     'numpy',
     'pandas',
-    'PyVCF',
+    'PyVCF3',
     'matplotlib',
     'matplotlib_venn',
 ]
