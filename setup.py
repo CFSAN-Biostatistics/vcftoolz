@@ -29,11 +29,11 @@ test_requirements = [
 
 setup(
     name='vcftoolz',
-    version='1.2.0',
+    version='1.2.1',
     description="Tools for working with Variant Call Format files.",
     long_description=readme + '\n\n' + history,
-    author="Steve Davis",
-    author_email='steven.davis@fda.hhs.gov',
+    author="Steve Davis", "Justin Payne"
+    author_email='steven.davis@fda.hhs.gov', 'justin.payne@fda.hhs.gov'
     url='https://github.com/CFSAN-Biostatistics/vcftoolz',
     packages=[
         'pyvenn',
