@@ -64,5 +64,5 @@ setup(
     entry_points={'console_scripts': ['vcftoolz = vcftoolz.cli:main']},
     setup_requires=["pytest-runner"],
     tests_require=test_requirements,
-    python_requires=">=3.8"
+    python_requires=">=3.9"
 )

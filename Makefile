@@ -1,6 +1,7 @@
 .PHONY: test clean-pyc clean-build docs clean
 
 help:
+	@echo "init - install submodules"
 	@echo "clean - remove all build, test, coverage and Python artifacts"
 	@echo "clean-build - remove build artifacts"
 	@echo "clean-pyc - remove Python file artifacts"
@@ -13,6 +14,9 @@ help:
 	@echo "release - package and upload a release"
 	@echo "dist - package"
 	@echo "install - install the package to the active Python's site-packages"
+
+init:
+	git submodule update --init --recursive
 
 clean: clean-build clean-pyc clean-test
 
@@ -64,4 +68,4 @@ dist: clean
 	ls -l dist
 
 install: clean
-	python setup.py install
+	python -m pip install -e .

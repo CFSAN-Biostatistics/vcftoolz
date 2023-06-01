@@ -5,9 +5,11 @@ History
 
 1.2.2 (2023-06-01)
 ------------------
-* Update PyVCF to PyVCF3
 * Fixed broken Pyvenn dependency
 
+1.2.1 (2023-05-09)
+------------------
+* Update PyVCF to PyVCF3
 
 1.2.0 (2019-04-04)
 ---------------------
