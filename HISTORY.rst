@@ -3,6 +3,12 @@
 History
 =======
 
+1.2.2 (2023-06-01)
+------------------
+* Update PyVCF to PyVCF3
+* Fixed broken Pyvenn dependency
+
+
 1.2.0 (2019-04-04)
 ---------------------
 * Fix defect in narrow command wrongly printing ALT=. when GT=.
