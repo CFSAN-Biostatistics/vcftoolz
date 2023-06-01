@@ -52,3 +52,6 @@ output
 
 # Other
 testing
+.pypirc
+.python-version
+.editorconfig
