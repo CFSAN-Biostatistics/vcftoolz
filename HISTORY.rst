@@ -3,6 +3,10 @@
 History
 =======
 
+1.2.3 (2023-06-02)
+------------------
+* Fixed imports in our fork of pyvenn
+
 1.2.2 (2023-06-01)
 ------------------
 * Fixed broken Pyvenn dependency
