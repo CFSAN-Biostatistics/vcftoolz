@@ -1,5 +1,7 @@
 .PHONY: test clean-pyc clean-build docs clean
 
+# https://blog.ganssle.io/articles/2021/10/setup-py-deprecated.html
+
 help:
 	@echo "init - install submodules"
 	@echo "clean - remove all build, test, coverage and Python artifacts"
@@ -58,13 +60,11 @@ docs:
 	$(MAKE) -C docs html
 	xdg-open docs/_build/html/index.html
 
-release: clean
-	python setup.py sdist upload
-	python setup.py bdist_wheel upload
+release: clean dist
+	twine upload dist/*
 
 dist: clean
-	python setup.py sdist
-	python setup.py bdist_wheel
+	python -m build
 	ls -l dist
 
 install: clean
