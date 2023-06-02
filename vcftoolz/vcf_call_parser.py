@@ -498,7 +498,7 @@ def call_generator(input, exclude_snps=False, exclude_indels=False, exclude_vars
     --------
     >>> # snp when snps included
     >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 1/1:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
-    Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=1/1, FT=PASS))
+    Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=1/1, FT=[]))
     >>> # snp when snps excluded
     >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
@@ -510,37 +510,37 @@ def call_generator(input, exclude_snps=False, exclude_indels=False, exclude_vars
 
     >>> # insertion when indels included
     >>> _test_call_generator("chrom 1 . A AT . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
-    Record(CHROM=chrom, POS=1, REF=A, ALT=[AT]) Call(sample=SAMPLE, CallData(GT=1/1, FT=PASS))
+    Record(CHROM=chrom, POS=1, REF=A, ALT=[AT]) Call(sample=SAMPLE, CallData(GT=1/1, FT=[]))
     >>> # insertion when indels excluded
     >>> _test_call_generator("chrom 1 . A AT . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
     >>> # deletion when indels included
     >>> _test_call_generator("chrom 1 . AT A . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
-    Record(CHROM=chrom, POS=1, REF=AT, ALT=[A]) Call(sample=SAMPLE, CallData(GT=1/1, FT=PASS))
+    Record(CHROM=chrom, POS=1, REF=AT, ALT=[A]) Call(sample=SAMPLE, CallData(GT=1/1, FT=[]))
     >>> # deletion when indels excluded
     >>> _test_call_generator("chrom 1 . AT A . PASS . GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
     >>> # structural variant when "other variants" included
     >>> _test_call_generator("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=False, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
-    Record(CHROM=chrom, POS=1, REF=AT, ALT=[A]) Call(sample=SAMPLE, CallData(GT=1/1, FT=PASS))
+    Record(CHROM=chrom, POS=1, REF=AT, ALT=[A]) Call(sample=SAMPLE, CallData(GT=1/1, FT=[]))
     >>> # structural variant when "other variants" excluded
     >>> _test_call_generator("chrom 1 . AT A . PASS SVTYPE=DEL; GT:FT 1/1:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
     >>> # ref call when ref calls included
     >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 0/0:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=False, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
-    Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=0/0, FT=PASS))
+    Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=0/0, FT=[]))
     >>> # ref call when ref calls excluded
     >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 0/0:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
     >>> # heterozygous snp call when snps and heterozygous calls included
     >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 0/1:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=False, exclude_filtered=True, exclude_missing=True)
-    Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=0/1, FT=PASS))
+    Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=0/1, FT=[]))
     >>> # heterozygous snp call when snps included, but heterozygous calls excluded
     >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 0/1:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
     >>> # FT filtered snp when snps and filtered calls included
     >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 1/1:FAIL", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=False, exclude_missing=True)
-    Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=1/1, FT=FAIL))
+    Record(CHROM=chrom, POS=1, REF=A, ALT=[T]) Call(sample=SAMPLE, CallData(GT=1/1, FT=['FAIL']))
     >>> # FT filtered snp when snps included, but filtered calls excluded
     >>> _test_call_generator("chrom 1 . A T . PASS . GT:FT 1/1:FAIL", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
 
@@ -562,23 +562,23 @@ def call_generator(input, exclude_snps=False, exclude_indels=False, exclude_vars
 
     >>> # mix of snps and indels in same record, all calls are homozygous
     >>> _test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
-    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=1/1, FT=PASS))
+    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=1/1, FT=[]))
     >>> _test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=True, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
-    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE2, CallData(GT=2/2, FT=PASS))
+    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE2, CallData(GT=2/2, FT=[]))
     >>> _test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 1/1:PASS 2/2:PASS", exclude_snps=False, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
-    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=1/1, FT=PASS))
-    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE2, CallData(GT=2/2, FT=PASS))
+    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=1/1, FT=[]))
+    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE2, CallData(GT=2/2, FT=[]))
     >>> _test_call_generator("chrom 1 . T G,TGA . PASS . GT:FT 2/2:PASS 1/1:PASS", exclude_snps=False, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=True, exclude_filtered=True, exclude_missing=True)
-    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=2/2, FT=PASS))
-    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE2, CallData(GT=1/1, FT=PASS))
+    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE1, CallData(GT=2/2, FT=[]))
+    Record(CHROM=chrom, POS=1, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE2, CallData(GT=1/1, FT=[]))
 
     >>> # mix of heterozygous snps and indels in same call
     >>> _test_call_generator("chrom 2 . T G,TGA . PASS . GT:FT 1/2:PASS", exclude_snps=False, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=False, exclude_filtered=True, exclude_missing=True)
-    Record(CHROM=chrom, POS=2, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE, CallData(GT=1/2, FT=PASS))
+    Record(CHROM=chrom, POS=2, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE, CallData(GT=1/2, FT=[]))
     >>> _test_call_generator("chrom 2 . T G,TGA . PASS . GT:FT 1/2:PASS", exclude_snps=False, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=False, exclude_filtered=True, exclude_missing=True)
-    Record(CHROM=chrom, POS=2, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE, CallData(GT=1/2, FT=PASS))
+    Record(CHROM=chrom, POS=2, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE, CallData(GT=1/2, FT=[]))
     >>> _test_call_generator("chrom 2 . T G,TGA . PASS . GT:FT 1/2:PASS", exclude_snps=True, exclude_indels=False, exclude_vars=True, exclude_refs=True, exclude_hetero=False, exclude_filtered=True, exclude_missing=True)
-    Record(CHROM=chrom, POS=2, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE, CallData(GT=1/2, FT=PASS))
+    Record(CHROM=chrom, POS=2, REF=T, ALT=[G, TGA]) Call(sample=SAMPLE, CallData(GT=1/2, FT=[]))
     >>> _test_call_generator("chrom 2 . T G,TGA . PASS . GT:FT 1/2:PASS", exclude_snps=True, exclude_indels=True, exclude_vars=True, exclude_refs=True, exclude_hetero=False, exclude_filtered=True, exclude_missing=True)
 
     """
