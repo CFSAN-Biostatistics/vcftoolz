@@ -85,6 +85,9 @@ metrics are generated:
 
 Venn diagrams
 ~~~~~~~~~~~~~
+
+By default, the Venn diagrams are output as PDFs in the current directory. The output location can be changed with the ``--venn_dir`` option.
+
 When 2 or 3 VCF files are compared, the following Venn diagrams are generated:
 
 * venn2.positions.pdf - Venn diagram of variant positions between all pairs of VCF files

@@ -446,7 +446,7 @@ def print_snp_detail_list(snp_set, alt_dict, format_dict, call_dict):
             print('\t'.join(fields))
 
 
-def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing, table_file):
+def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_vars, exclude_refs, exclude_hetero, exclude_filtered, exclude_missing, table_file, venn_dir):
     """
     Compare and analyze the snps found in two or more input VCF files.
 
@@ -474,6 +474,8 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
         Exclude calls with all data elements missing.
     table_file_path : str
         Path to the TSV file to be written.
+    venn_dir: str
+        Directory where Venn diagram PDFs should be saved.
     """
     # Validate input files
     bad_files_count = verify_non_empty_input_files("VCF file", vcf_path_list)
@@ -730,7 +732,7 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
                     colorize_venn2(c)
                     plt_idx += 1
                 axes[0].set_title(title)
-            plt.savefig(output_file)
+            plt.savefig("{0}/{1}".format(venn_dir, output_file))
             plt.close()
 
         make_venn2(snp_set_list, "Venn Diagram of SNPs", "venn2.snps.pdf")
@@ -758,7 +760,7 @@ def compare(truth_flag, vcf_path_list, exclude_snps, exclude_indels, exclude_var
         axes[plt_idx].set_title("SNPs", fontsize=titlesize)
 
         plt.subplots_adjust(hspace=0.5)  # adjust height spacing between subplots
-        plt.savefig("venn%i.pdf" % num_vcf_files)
+        plt.savefig("{0}/venn{1}.pdf".format(venn_dir, num_vcf_files))
         plt.close()
 
 
