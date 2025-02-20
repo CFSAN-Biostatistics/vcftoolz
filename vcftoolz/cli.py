@@ -54,6 +54,7 @@ def parse_arguments(system_args):
     subparser.add_argument("--exclude_missing",  dest="exclude_missing",  action="store_true",      help="Exclude calls with all data elements missing.")
     subparser.add_argument("--truth",            dest="truth_flag",       action="store_true",      help="Additional metrics are generated assuming the first VCF file is the truth. This also triggers extra analysis of filtered calls.")
     subparser.add_argument("--tabulate",         dest="table_file",       type=str, metavar='FILE', help="Tabulate the results in the specified tab-separated-value file.")
+    subparser.add_argument("--venn_dir",         dest="venn_dir",         type=str, metavar='DIR',  help="Directory where Venn diagram PDFs should be saved.", default=".")
     subparser.set_defaults(func=compare_command)
 
     help_str = "Reformat VCF data into a tall, narrow format."
@@ -118,7 +119,7 @@ def compare_command(args):
     if args.truth_flag and len(vcf_path_list) != 2:
         logging.error("When the truth option is used, there must be exactly 2 VCF files.")
         exit(1)
-    vcftoolz.compare(args.truth_flag, vcf_path_list, args.exclude_snps, args.exclude_indels, args.exclude_vars, args.exclude_refs, args.exclude_hetero, args.exclude_filtered, args.exclude_missing, args.table_file)
+    vcftoolz.compare(args.truth_flag, vcf_path_list, args.exclude_snps, args.exclude_indels, args.exclude_vars, args.exclude_refs, args.exclude_hetero, args.exclude_filtered, args.exclude_missing, args.table_file, args.venn_dir)
 
 
 def narrow_command(args):
